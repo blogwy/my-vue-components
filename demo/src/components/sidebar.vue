@@ -3,22 +3,38 @@
     <div :class="['sidebar',sidebarFlag ? '':'sidebar-hide']">
       <div :class="['sidebar-bar',sidebarFlag ? '':'sidebar-bar-hide']">
         <i v-if="sidebarFlag" style="flex: 5"></i>
-        <i class="iconfont icon-leimupinleifenleileibie icon-menu" v-on:click="toggleSidebar"></i>
+        <i class="iconfont icon-leimupinleifenleileibie icon-menu" @click="toggleSidebar"></i>
       </div>
-      <div v-for="(item,index) in sider">
-        <div :class="['sidebar-item', currentIndex === index ? 'is-open': '', sidebarFlag ? '':'sidebar-item-hide']"
-             v-on:click="openSidebar(index)">
+      <div v-for="(item,index) in menuFirst">
+        <div :class="['sidebar-item', currentSecondIndex === index ? 'is-open': '', sidebarFlag ? '':'sidebar-item-hide']"
+             @click.stop="openMenuSecond(index,item.active,item.link)">
           <i :class="['iconfont',item.icon,'icon']"></i>
           <span v-if="sidebarFlag" class="title">{{ item.title }}</span>
-          <i v-if="sidebarFlag" class="iconfont icon-54 icon-arrow"></i>
+          <i v-if="sidebarFlag" :class="['iconfont','icon-54','icon-arrow',item.active ? '': 'hide-color']"></i>
         </div>
-        <div v-if="sidebarFlag" class="sidebar-item-ul">
-          <div class="sidebar-item-li" v-for="menu in item.test">
-            <div class="icon"></div>
-            <div class="title">
-              {{menu}}
+        <!--二级菜单-->
+        <div v-if="sidebarFlag" class="second-item-ul">
+          <div v-for="(secondItem,secondIndex) in item.menuSecond" class="second-item">
+            <div :class="['second-item-li',currentThirdIndex === secondIndex ? 'is-open': '', sidebarFlag ? '':'sidebar-item-hide']"
+                 @click.stop="openMenuThird(index,secondIndex,secondItem.active,secondItem.link)">
+              <div class="icon"></div>
+              <div class="title">
+                {{secondItem.title}}
+              </div>
+              <div :class="['iconfont','icon-arrow',secondItem.active ? '': 'hide-color']"></div>
             </div>
-            <div class="icon-arrow"></div>
+            <!--三级菜单-->
+            <div v-if="sidebarFlag" class="third-item-ul">
+              <div v-for="(thirdItem,thirdIndex) in secondItem.menuThird" class="third-item">
+                <div class="third-item-li" @click.stop="openMenuFourth(thirdItem.active,thirdItem.link)">
+                  <div class="icon"></div>
+                  <div class="title">
+                    {{thirdItem.title}}
+                  </div>
+                  <div :class="['iconfont','icon-arrow',thirdItem.active ? '': 'hide-color']"></div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -29,23 +45,58 @@
 <script>
   export default {
     name: 'sidebar',
+    props: {
+      secondIndex: Number,
+      thirdIndex: Number
+    },
     data() {
       return {
-        sider: [
+        menuFirst: [
           {
             icon: 'icon-yemian-copy-active',
             title: '主页',
-            active: false
+            active: false,
+            link: 'home.html'
           },
           {
             icon: 'icon-gouwuche',
             title: '账户',
             active: true,
-            test: [
-                '账户添加',
-                '账户删除',
-                '账户注销',
-                '账户设置'
+            menuSecond: [
+              {
+                icon: '',
+                title: '账户添加',
+                active: false,
+                link: 'home.html'
+              },
+              {
+                icon: '',
+                title: '账户删除',
+                active: true,
+                menuThird: [
+                  {
+                    icon: '',
+                    title: '删除一',
+                    active: false,
+                    link: 'home.html'
+                  },
+                  {
+                    icon: '',
+                    title: '删除二',
+                    active: false
+                  }
+                ]
+              },
+              {
+                icon: '',
+                title: '账户注销',
+                active: false
+              },
+              {
+                icon: '',
+                title: '账户设置',
+                active: false
+              }
             ]
           },
           {
@@ -59,19 +110,39 @@
             active: false
           }
         ],
-        currentIndex: null,
+        currentSecondIndex: this.secondIndex,
+        currentThirdIndex: this.thirdIndex,
         sidebarFlag: true
       }
     },
     methods:{
-      openSidebar(index){
-        console.log(index);
-        if (this.currentIndex !== index){
-          this.currentIndex = index;
+      openMenuSecond(index,active,link){
+        if (this.currentSecondIndex !== index){
+          this.currentSecondIndex = index;
+          this.currentThirdIndex = null;
         }else {
-          this.currentIndex = null;
+          this.currentSecondIndex = null;
+          this.currentThirdIndex = null;
         }
-        
+        if (!active){
+          window.location.href = link;
+        }
+      },
+      openMenuThird(index,secondIndex,active,link){
+        if (this.currentThirdIndex !== secondIndex){
+          this.currentSecondIndex = index;
+          this.currentThirdIndex = secondIndex;
+        }else {
+          this.currentThirdIndex = null;
+        }
+        if (!active){
+          window.location.href = link;
+        }
+      },
+      openMenuFourth(active,link){
+        if (!active){
+          window.location.href = link;
+        }
       },
       toggleSidebar(){
         if (this.sidebarFlag){
@@ -81,8 +152,18 @@
         }
       }
     },
+    watch: {
+      sidebarFlag(curVal,oldVal){
+        this.$emit('sidebar-status', curVal);
+      },
+    },
     mounted(){
-      document.body.addEventListener('touchstart',function () {})
+      this.$emit('sidebar-status', this.sidebarFlag);
+      let obj = {
+        menuFirst: this.menuFirst[this.currentSecondIndex].title,
+        menuSecond: this.menuFirst[this.currentSecondIndex].active ? (this.menuFirst[this.currentSecondIndex].menuSecond[this.currentThirdIndex].title) : null
+      };
+      this.$emit('current-menu',obj);
     }
   }
 </script>
@@ -131,18 +212,39 @@
   .sidebar-item:hover{
     background: #ecf5ff;
   }
-  .icon{
+  .sidebar-item > .icon{
     flex: 1;
     font-size: 18px;
     color: #909399;
     text-align: center;
   }
-  .title{
+  .sidebar-item > .title{
     flex: 4;
     font-size: 14px;
     color: #555555;
+    white-space: nowrap;
   }
-  .icon-arrow{
+  .sidebar-item > .icon-arrow{
+    flex: 1;
+    font-size: 12px;
+    color: #909399;
+    text-align: center;
+    transition: transform .3s;
+  }
+  
+  .second-item-li > .icon{
+    flex: 1;
+    font-size: 18px;
+    color: #909399;
+    text-align: center;
+  }
+  .second-item-li > .title{
+    flex: 6;
+    font-size: 14px;
+    color: #555555;
+    white-space: nowrap;
+  }
+  .second-item-li > .icon-arrow{
     flex: 1;
     font-size: 12px;
     color: #909399;
@@ -152,13 +254,13 @@
   .is-open>.icon-arrow{
     transform: rotate(180deg);
   }
-  .sidebar-item-ul{
+  .second-item-ul{
     flex: none;
     width: 100%;
     height: 0px;
     transition: .3s height ease-in-out;
   }
-  .sidebar-item-li{
+  .second-item-li{
     display: flex;
     padding: 0px 20px;
     height: 0px;
@@ -167,18 +269,71 @@
     opacity:0;
     transition: opacity .3s,background-color .3s,height .3s;
   }
-  .sidebar-item-li:hover{
+  .second-item-li:hover{
     background: #ecf5ff;
   }
-  .sidebar-item-li:active{
+  .second-item-li:active{
     background: #ecf5ff;
   }
-  .is-open + .sidebar-item-ul{
+  .is-open + .second-item-ul{
     display: block;
     height: 100%;
   }
-  .is-open + .sidebar-item-ul>.sidebar-item-li{
+  .is-open + .second-item-ul>.second-item>.second-item-li{
     opacity:1;
     height: 50px;
+  }
+  
+  /*三级菜单*/
+  .third-item-ul{
+    flex: none;
+    width: 100%;
+    height: 0px;
+    transition: .3s height ease-in-out;
+  }
+  .third-item-li{
+    display: flex;
+    padding: 0px 20px;
+    height: 0px;
+    align-items: center;
+    cursor: pointer;
+    opacity:0;
+    transition: opacity .3s,background-color .3s,height .3s;
+  }
+  .third-item-li:hover{
+    background: #ecf5ff;
+  }
+  .third-item-li:active{
+    background: #ecf5ff;
+  }
+  .is-open + .third-item-ul{
+    display: block;
+    height: 100%;
+  }
+  .is-open + .third-item-ul>.third-item>.third-item-li{
+    opacity:1;
+    height: 50px;
+  }
+  .third-item-li > .icon{
+    flex: 1;
+    font-size: 18px;
+    color: #909399;
+    text-align: center;
+  }
+  .third-item-li > .title{
+    flex: 4;
+    font-size: 14px;
+    color: #555555;
+    white-space: nowrap;
+  }
+  .third-item-li > .icon-arrow{
+    flex: 1;
+    font-size: 12px;
+    color: #909399;
+    text-align: center;
+    transition: transform .3s;
+  }
+  .hide-color{
+    color: transparent!important;
   }
 </style>

@@ -14,6 +14,12 @@
 
 * 导航菜单
 
+* 弹窗
+
+* 对话框
+
 * 扫码(条形码/二维码)
 
 * vue表单验证插件 ==>[点击查看](https://www.npmjs.com/package/wy-validate)<==使用方法
+
+
