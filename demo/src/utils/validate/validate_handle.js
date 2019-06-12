@@ -274,22 +274,38 @@ let handle = {
     });
   },
   checkRequired(el,item,vnode){
-    if (!item.required) return;
-    el.addEventListener(item.trigger,function () {
-      if (!el.checked){
-        vnode.context.$set(vnode.context.wyError,el.name,{
-          message: item.message,
-          validated: false,
-          showMessage: true
-        });
-      }else {
+    if (typeof (item.required) == 'undefined') return;
+    if (!item.required){
+      el.addEventListener(item.trigger,function () {
         vnode.context.$set(vnode.context.wyError,el.name,{
           message: '',
           validated: true,
           showMessage: false
         });
-      }
-    });
+      });
+    }else {
+      // 初始化数据
+      vnode.context.$set(vnode.context.wyError,el.name,{
+        message: '不能为空',
+        validated: false,
+        showMessage: false
+      });
+      el.addEventListener(item.trigger,function () {
+        if (!el.checked){
+          vnode.context.$set(vnode.context.wyError,el.name,{
+            message: item.message,
+            validated: false,
+            showMessage: true
+          });
+        }else {
+          vnode.context.$set(vnode.context.wyError,el.name,{
+            message: '',
+            validated: true,
+            showMessage: false
+          });
+        }
+      });
+    }
   },
   checkLimit(el,item,vnode){
     if (!item.min && !item.max) return;
