@@ -9,35 +9,35 @@
     </div>
     <div v-if="pickerFlag" class="picker" @click.stop>
       <div v-if="type === 'datetime'" class="picker-datetime">
-        <div class="picker-datetime-item"><span>{{currentDate}}</span></div>
+        <div class="picker-datetime-item"><span>{{currentDate ? currentDate : '请选择日期'}}</span></div>
         <div class="picker-datetime-item timePick" @click.stop="showTimePicker">
-          <span>{{currentTime}}</span>
+          <span>{{currentTime ? currentTime : '请选择时间'}}</span>
           <div class="picker-datetime-time" v-if="timePickerFlag">
-          <div class="datetime-content">
-            <div class="datetime-content-grounp">
-              <div :class="['datetime-content-item',item.current ? 'datetime-content-item-current' : '']"
-                   v-for="(item,index) in dateHours" @click.stop="changeTime('Hours',item.text)">
-                {{item.text}}
+            <div class="datetime-content">
+              <div class="datetime-content-grounp">
+                <div :class="['datetime-content-item',item.current ? 'datetime-content-item-current' : '']"
+                     v-for="(item,index) in dateHours" @click.stop="changeTime('Hours',item.text)">
+                  {{item.text}}
+                </div>
+              </div>
+              <div class="datetime-content-grounp">
+                <div :class="['datetime-content-item',item.current ? 'datetime-content-item-current' : '']"
+                     v-for="(item,index) in dateMinutes" @click.stop="changeTime('Minutes',item.text)">
+                  {{item.text}}
+                </div>
+              </div>
+              <div class="datetime-content-grounp">
+                <div :class="['datetime-content-item',item.current ? 'datetime-content-item-current' : '']"
+                     v-for="(item,index) in dateSeconds" @click.stop="changeTime('Seconds',item.text)">
+                  {{item.text}}
+                </div>
               </div>
             </div>
-            <div class="datetime-content-grounp">
-              <div :class="['datetime-content-item',item.current ? 'datetime-content-item-current' : '']"
-                   v-for="(item,index) in dateMinutes" @click.stop="changeTime('Minutes',item.text)">
-                {{item.text}}
-              </div>
-            </div>
-            <div class="datetime-content-grounp">
-              <div :class="['datetime-content-item',item.current ? 'datetime-content-item-current' : '']"
-                   v-for="(item,index) in dateSeconds" @click.stop="changeTime('Seconds',item.text)">
-                {{item.text}}
-              </div>
+            <div class="datetime-foot">
+              <div class="datetime-foot-btn success" @click.stop="selectDateTime">确定</div>
+              <div class="datetime-foot-btn">取消</div>
             </div>
           </div>
-          <div class="datetime-foot">
-            <div class="datetime-foot-btn success" @click.stop="selectDateTime">确定</div>
-            <div class="datetime-foot-btn">取消</div>
-          </div>
-        </div>
         </div>
       </div>
       <div class="picker-header">
@@ -80,13 +80,13 @@
       </div>
       <div class="picker-date">
         <div class="picker-date-item" v-if="type === 'date' || type === 'datetime'" v-for="(item,index) in date">
-          <span :class="['picker-date-item-text',{'current-date' : item.active},{'disabled-current-date' : item.isDisabled}]" @click.stop="selectDate(item.val,index)">{{item.val}}</span>
+          <span :class="['picker-date-item-text',{'current-date' : item.active},{'disabled-current-date' : item.isDisabled}]" @click.stop="selectDate(item.val,index)">{{item.text}}</span>
         </div>
         <div class="picker-month-item" v-if="type === 'month'" v-for="(item,index) in dateMonth">
-          <span :class="['picker-month-item-text',{'current-month' : item.active},{'disabled-current-month' : item.isDisabled}]" @click="selectMonth(item.val,index)">{{item.val}}</span>
+          <span :class="['picker-month-item-text',{'current-month' : item.active},{'disabled-current-month' : item.isDisabled}]" @click="selectMonth(item.val,index)">{{item.text}}</span>
         </div>
         <div class="picker-year-item" v-if="type === 'year'" v-for="(item,index) in dateYear">
-          <span :class="['picker-year-item-text',{'current-year' : item.active},{'disabled-current-year' : item.isDisabled}]" @click="selectYear(item.val,index)">{{item.val}}</span>
+          <span :class="['picker-year-item-text',{'current-year' : item.active},{'disabled-current-year' : item.isDisabled}]" @click="selectYear(item.val,index)">{{item.text}}</span>
         </div>
       </div>
     </div>
@@ -94,1083 +94,1050 @@
 </template>
 
 <script>
-export default {
-  name: 'date-picker',
-  data(){
-    return {
-      pickerFlag: false,
-      timePickerFlag: false,
-      current: '',
-      type: this.mode,
-      placeholder: this.placeholderText,
-      defaultTimestamp: 0,
-      minTimestamp: 0,
-      maxTimestamp: 0,
-      // type=datetime
+  export default {
+    name: 'date-picker',
+    props: {
+      // 模式 date month year datetime(日期时间模式)
+      mode: String,
+      placeholderText: String,
+      // 初始化时间，时间戳，默认当前时间
+      defaultTime: {
+        type: Number,
+        default: 0
+      },
+      // 开始时间，时间戳，默认无限制
+      minTime: {
+        type: Number,
+        default: 0
+      },
+      // 结束时间，时间戳，默认无限制
+      maxTime: {
+        type: Number,
+        default: 0
+      },
+      // 格式化 YYYY-MM-DD hh:mm:ss
+      format: {
+        type: String,
+        default: 'default'
+      },
+      // picker宽度
+      pickerWidth: {
+        type: Number,
+        default(){
+          switch (this.mode){
+            case 'datetime':
+              return 250;
+            case 'date':
+              return 155;
+            case 'month':
+              return 155;
+            case 'year':
+              return 155;
+          }
+        }
+      }
+    },
+    data() {
+      return {
+        pickerFlag: false,
+        timePickerFlag: false,
+        // 当前值
+        current: '',
+        type: this.mode,
+        placeholder: this.placeholderText,
+        // type=datetime
+        currentTime: '',
+        currentDate: '',
+        dateHours: [
+          {
+            text: '',
+            current: false
+          },
+          {
+            text: '',
+            current: false
+          },
+          {
+            text: '00',
+            current: true
+          },
+          {
+            text: '01',
+            current: false
+          },
+          {
+            text: '02',
+            current: false
+          }
+        ],
+        dateMinutes: [
+          {
+            text: '',
+            current: false
+          },
+          {
+            text: '',
+            current: false
+          },
+          {
+            text: '00',
+            current: true
+          },
+          {
+            text: '01',
+            current: false
+          },
+          {
+            text: '02',
+            current: false
+          }
+        ],
+        dateSeconds: [
+          {
+            text: '',
+            current: false
+          },
+          {
+            text: '',
+            current: false
+          },
+          {
+            text: '00',
+            current: true
+          },
+          {
+            text: '01',
+            current: false
+          },
+          {
+            text: '02',
+            current: false
+          }
+        ],
+        // type=date
+        year: '',
+        month: '',
+        // 已选中的项
+        day: '',
+        //
+        weeks: ['日','一','二','三','四','五','六'],
+        date: [],
+        // type=month
+        year2: '',
+        // 已选中的项
+        month2: '',
+        dateMonth: [],
+        // type=year
+        year3: '',
+        year4: '',
+        // 已选中的项
+        year5: '',
+        dateYear: []
+      }
+    },
+    methods: {
+      changeTime(type,time){
+        let timeArray = [
+          {
+            text: '',
+            current: false
+          },
+          {
+            text: '',
+            current: false
+          },
+          {
+            text: '',
+            current: true
+          },
+          {
+            text: '',
+            current: false
+          },
+          {
+            text: '',
+            current: false
+          }
+        ];
+        let _time = parseInt(time);
+        let forArray = [-2,-1,0,1,2];
+        if (!_time) return;
+        if (type === 'Hours'){
+          forArray.forEach(function (item,index) {
+            if ((_time + item) < 0){
+              timeArray[index].text = '';
+            }else if ((_time + item) >= 0 && (_time + item) < 10){
+              timeArray[index].text = '0' + (_time + item);
+            }else if ((_time + item) >= 10 && (_time + item) < 24){
+              timeArray[index].text = '' + (_time + item);
+            }
+          });
+          this.dateHours = timeArray;
+        }
+        if (type === 'Minutes'){
+          forArray.forEach(function (item,index) {
+            if ((_time + item) < 0){
+              timeArray[index].text = '';
+            }else if ((_time + item) >= 0 && (_time + item) < 10){
+              timeArray[index].text = '0' + (_time + item);
+            }else if ((_time + item) >= 10 && (_time + item) < 60){
+              timeArray[index].text = '' + (_time + item);
+            }
+          });
+          this.dateMinutes = timeArray;
+        }
+        if (type === 'Seconds'){
+          forArray.forEach(function (item,index) {
+            if ((_time + item) < 0){
+              timeArray[index].text = '';
+            }else if ((_time + item) >= 0 && (_time + item) < 10){
+              timeArray[index].text = '0' + (_time + item);
+            }else if ((_time + item) >= 10 && (_time + item) < 60){
+              timeArray[index].text = '' + (_time + item);
+            }
+          });
+          this.dateSeconds = timeArray;
+        }
+      },
+      showPicker(){
+        if (this.pickerFlag){
+          this.pickerFlag = false;
+          this.timePickerFlag = false;
+        }else {
+          this.pickerFlag = true;
+        }
+      },
+      showTimePicker(){
+        if (this.timePickerFlag){
+          this.timePickerFlag = false;
+        }else {
+          this.timePickerFlag = true;
+        }
+      },
+      yearPreYear(){
+        this.year4 = this.year3 -1;
+        this.year3 = this.year4 -11;
+      },
+      yearNextYear(){
+        this.year3 = this.year4 +1;
+        this.year4 = this.year3 +11;
+      },
+      selectYear(year,index){
+        if (this.dateYear[index].isDisabled) return;
 
-      // type=date
-      dateHours: [
-        {
-          text: '',
-          current: false
-        },
-        {
-          text: '',
-          current: false
-        },
-        {
-          text: '00',
-          current: true
-        },
-        {
-          text: '01',
-          current: false
-        },
-        {
-          text: '02',
-          current: false
+        // 当前值
+        this.current = this.dateFormat(year);
+        // css控制
+        if (this.dateYear[index].active){
+          this.dateYear.forEach((item, index) => {
+            item.active = false;
+          });
+          this.dateYear[index].active = false;
+        }else {
+          this.dateYear.forEach((item, index) => {
+            item.active = false;
+          });
+          this.dateYear[index].active = true;
+          this.$emit('change',this.current);
+          this.year5 = year;
         }
-      ],
-      dateMinutes: [
-        {
-          text: '',
-          current: false
-        },
-        {
-          text: '',
-          current: false
-        },
-        {
-          text: '00',
-          current: true
-        },
-        {
-          text: '01',
-          current: false
-        },
-        {
-          text: '02',
-          current: false
+      },
+      monthPreYear(){
+        this.year2 = this.year2 -1;
+      },
+      monthNextYear(){
+        this.year2 = this.year2 +1;
+      },
+      selectMonth(month,index){
+        if (this.dateMonth[index].isDisabled) return;
+        // 当前值
+        this.current = this.dateFormat(this.year2,month);
+        // css控制
+        if (this.dateMonth[index].active){
+          this.dateMonth.forEach((item, index) => {
+            item.active = false;
+          });
+          this.dateMonth[index].active = false;
+        }else {
+          this.dateMonth.forEach((item, index) => {
+            item.active = false;
+          });
+          this.dateMonth[index].active = true;
+          this.$emit('change',this.current);
+          this.month2 = this.year2 + '-' + month;
         }
-      ],
-      dateSeconds: [
-        {
-          text: '',
-          current: false
-        },
-        {
-          text: '',
-          current: false
-        },
-        {
-          text: '00',
-          current: true
-        },
-        {
-          text: '01',
-          current: false
-        },
-        {
-          text: '02',
-          current: false
+      },
+      selectDateTime(){
+        this.currentTime = this.dateHours[2].text + ':' + this.dateMinutes[2].text + ':' + this.dateSeconds[2].text;
+        let currentVal = this.currentDate.split('-');
+        this.current = this.dateFormat(currentVal[0],currentVal[1],currentVal[2],this.dateHours[2].text,this.dateMinutes[2].text,this.dateSeconds[2].text);
+        this.$emit('change',this.current);
+        this.timePickerFlag = false;
+      },
+      selectDate(day,index){
+        if (!day) return;
+        if (this.type === 'date'){
+          if (this.date[index].isDisabled) return;
+          // 当前值
+          this.current = this.dateFormat(this.year,this.month,day);
+          // css控制
+          if (this.date[index].active){
+            this.date.forEach((item, index) => {
+              item.active = false;
+            });
+            this.date[index].active = false;
+          }else {
+            this.date.forEach((item, index) => {
+              item.active = false;
+            });
+            this.date[index].active = true;
+            this.$emit('change',this.current);
+            this.day = this.year + '-' +this.month + '-' + day;
+          }
         }
-      ],
-      currentDate: 0,
-      currentTime: '',
-      year: new Date(this.defaultTime).getFullYear(),
-      month: (new Date(this.defaultTime).getMonth())+1,
-      weeks: ['日','一','二','三','四','五','六'],
-      date: [],
-      // type=month
-      currentMonth: 0,
-      year2: new Date(this.defaultTime).getFullYear(),
-      dateMonth: [
-        {
-          val: '一月',
-          active: false,
-          isDisabled: false
-        },
-        {
-          val: '二月',
-          active: false,
-          isDisabled: false
-        },
-        {
-          val: '三月',
-          active: false,
-          isDisabled: false
-        },
-        {
-          val: '四月',
-          active: false,
-          isDisabled: false
-        },
-        {
-          val: '五月',
-          active: false,
-          isDisabled: false
-        },
-        {
-          val: '六月',
-          active: false,
-          isDisabled: false
-        },
-        {
-          val: '七月',
-          active: false,
-          isDisabled: false
-        },
-        {
-          val: '八月',
-          active: false,
-          isDisabled: false
-        },
-        {
-          val: '九月',
-          active: false,
-          isDisabled: false
-        },
-        {
-          val: '十月',
-          active: false,
-          isDisabled: false
-        },
-        {
-          val: '十一月',
-          active: false,
-          isDisabled: false
-        },
-        {
-          val: '十二月',
-          active: false,
-          isDisabled: false
+        if (this.type === 'datetime'){
+          if (this.date[index].isDisabled) return;
+          // 当前值
+          this.current = this.dateFormat(this.year,this.month,day,0,0,0);
+          // css控制
+          if (this.date[index].active){
+            this.date.forEach((item, index) => {
+              item.active = false;
+            });
+            this.date[index].active = false;
+          }else {
+            this.date.forEach((item, index) => {
+              item.active = false;
+            });
+            this.date[index].active = true;
+            this.$emit('change',this.current);
+            this.currentDate = this.year + '-' + (this.month > 9 ? this.month : '0' + this.month) + '-' + (day > 9 ? day : '0' + day);
+            this.currentTime = '00:00:00';
+          }
         }
-      ],
-      // type=year
-      currentYear: 0,
-      year3: new Date(this.defaultTime).getFullYear() - 11,
-      year4: new Date(this.defaultTime).getFullYear(),
-      dateYear: []
-    }
-  },
-  props: {
-    // 模式 date month year datetime(日期时间模式)
-    mode: String,
-    placeholderText: String,
-    // 初始化时间，时间戳，默认当前时间
-    defaultTime: {
-      type: Number,
-      default: new Date().getTime()
-    },
-    // 开始时间，时间戳，默认无限制
-    minTime: {
-      type: Number,
-      default: 0
-    },
-    // 结束时间，时间戳，默认无限制
-    maxTime: {
-      type: Number,
-      default: 0
-    },
-    // 格式化
-    format: {
-      type: String,
-      default: 'default'
-    },
-    // picker宽度
-    pickerWidth: {
-      type: Number,
-      default: 250
-    }
-  },
-  methods: {
-    changeTime(type,time){
-      let timeArray = [
-        {
-          text: '',
-          current: false
-        },
-        {
-          text: '',
-          current: false
-        },
-        {
-          text: '',
-          current: true
-        },
-        {
-          text: '',
-          current: false
-        },
-        {
-          text: '',
-          current: false
+      },
+      datePreYear(){
+        this.year = this.year -1;
+      },
+      datePreMonth(){
+        if (this.month === 1){
+          this.month = 12;
+          this.year = this.year -1;
+        }else {
+          this.month = this.month -1;
         }
-      ];
-      let _time = parseInt(time);
-      let forArray = [-2,-1,0,1,2];
-      if (!_time) return;
-      if (type === 'Hours'){
-        forArray.forEach(function (item,index) {
-          if ((_time + item) < 0){
-            timeArray[index].text = '';
-          }else if ((_time + item) >= 0 && (_time + item) < 10){
-            timeArray[index].text = '0' + (_time + item);
-          }else if ((_time + item) >= 10 && (_time + item) < 24){
-            timeArray[index].text = '' + (_time + item);
+
+      },
+      dateNextMonth(){
+        if (this.month === 12){
+          this.month = 1;
+          this.year = this.year + 1;
+        }else {
+          this.month = this.month +1;
+        }
+      },
+      dateNextYear(){
+        this.year = this.year +1;
+      },
+      isLeap(year){
+        if((year%4==0 && year%100!=0) || year%400==0){
+          return true;
+        }
+        else{
+          return false;
+        }
+      },
+      getWeek(dateString){
+        let date;
+        if(!dateString){
+          date = new Date;
+        }else{
+          let dateArray = dateString.split("-");
+          date = new Date(dateArray[0], parseInt(dateArray[1] - 1), dateArray[2]);
+        }
+        return "星期" + "日一二三四五六".charAt(date.getDay());
+      },
+      getCalendarData(year,month,day,minDate,maxDate){
+        let dateStrStart = year + '-' + month + '-1',
+            dateStrEnd = '';
+        let comDay = day.split('-');
+        let objNull = { val:'',active:false,isDisabled: false };
+        let monthDate = [31,0,31,30,31,30,31,31,30,31,30,31];
+        let currentMonthDate = [];
+        let minDateYear = new Date(minDate).getFullYear(),
+            minDateMouth = new Date(minDate).getMonth() + 1,
+            minDateDate = new Date(minDate).getDate(),
+            maxDateYear = new Date(maxDate).getFullYear(),
+            maxDateMouth = new Date(maxDate).getMonth() + 1,
+            maxDateDate = new Date(maxDate).getDate();
+        if (parseInt(month) === 2){
+          // 2月
+          if (this.isLeap(parseInt(year))){
+            // 是润年
+            monthDate[1] = 29;
+          }else {
+            // 是平年
+            monthDate[1] = 28;
+          }
+        }
+        let x = monthDate[parseInt(month) - 1];
+        for (let i=0;i<x;i++){
+          let obj = {};
+          obj.val = i+1;
+          obj.text = i+1;
+          obj.active = false;
+          if (year === parseInt(comDay[0]) && month === parseInt(comDay[1]) && obj.val === parseInt(comDay[2])){
+            obj.active = true;
+          }else {
+            obj.active = false;
+          }
+
+          // 添加minDate maxDate标记
+
+          if (minDate){
+            if (year < minDateYear){
+              obj.isDisabled = true;
+            }else if (year === minDateYear){
+              if (month < minDateMouth){
+                obj.isDisabled = true;
+              }else if (month === minDateMouth){
+                if (obj.val < minDateDate){
+                  obj.isDisabled = true;
+                }
+              }
+            }
+          }
+          if (maxDate){
+            if (year > maxDateYear){
+              obj.isDisabled = true;
+            }else if (year === maxDateYear){
+              if (month > maxDateMouth){
+                obj.isDisabled = true;
+              }else if (month === maxDateMouth){
+                if (obj.val > maxDateDate){
+                  obj.isDisabled = true;
+                }
+              }
+            }
+          }
+          currentMonthDate.push(obj);
+        }
+        dateStrEnd = year + '-' + month + '-' +monthDate[parseInt(month) - 1];
+        switch (this.getWeek(dateStrStart)){
+          case '星期日':
+            break;
+          case '星期一':
+            for (let i=0;i<1;i++){
+              currentMonthDate.unshift(objNull);
+            }
+            break;
+          case '星期二':
+            for (let i=0;i<2;i++){
+              currentMonthDate.unshift(objNull);
+            }
+            break;
+          case '星期三':
+            for (let i=0;i<3;i++){
+              currentMonthDate.unshift(objNull);
+            }
+            break;
+          case '星期四':
+            for (let i=0;i<4;i++){
+              currentMonthDate.unshift(objNull);
+            }
+            break;
+          case '星期五':
+            for (let i=0;i<5;i++){
+              currentMonthDate.unshift(objNull);
+            }
+            break;
+          case '星期六':
+            for (let i=0;i<6;i++){
+              currentMonthDate.unshift(objNull);
+            }
+            break;
+        }
+        switch (this.getWeek(dateStrEnd)){
+          case '星期日':
+            for (let i=0;i<6;i++){
+              currentMonthDate.push(objNull);
+            }
+            break;
+          case '星期一':
+            for (let i=0;i<5;i++){
+              currentMonthDate.push(objNull);
+            }
+            break;
+          case '星期二':
+            for (let i=0;i<4;i++){
+              currentMonthDate.push(objNull);
+            }
+            break;
+          case '星期三':
+            for (let i=0;i<3;i++){
+              currentMonthDate.push(objNull);
+            }
+            break;
+          case '星期四':
+            for (let i=0;i<2;i++){
+              currentMonthDate.push(objNull);
+            }
+            break;
+          case '星期五':
+            for (let i=0;i<1;i++){
+              currentMonthDate.push(objNull);
+            }
+            break;
+          case '星期六':
+            break;
+        }
+        return currentMonthDate;
+      },
+      getCalendarYear(start,end,year,minDate,maxDate){
+        let years = [];
+        let minDateYear = new Date(minDate).getFullYear(),
+            maxDateYear = new Date(maxDate).getFullYear();
+        for (let i=start;i<=end;i++){
+          let obj = {};
+          obj.val = i;
+          obj.text = i;
+          if (obj.val === parseInt(year)){
+            obj.active = true;
+          }else {
+            obj.active = false;
+          }
+          obj.isDisabled = false;
+          // 添加minDate maxDate标记
+          if (minDate){
+            if (obj.val < minDateYear){
+              obj.isDisabled = true;
+            }
+          }
+          if (maxDate){
+            if (obj.val > maxDateYear){
+              obj.isDisabled = true;
+            }
+          }
+          years.push(obj);
+        }
+        return years;
+      },
+      getCalendarMonth(curYear,curMonth,minDate,maxDate){
+        let month = [
+              {
+                val: 1,
+                text: '一月',
+                active: false,
+                isDisabled: false
+              },
+              {
+                val: 2,
+                text: '二月',
+                active: false,
+                isDisabled: false
+              },
+              {
+                val: 3,
+                text: '三月',
+                active: false,
+                isDisabled: false
+              },
+              {
+                val: 4,
+                text: '四月',
+                active: false,
+                isDisabled: false
+              },
+              {
+                val: 5,
+                text: '五月',
+                active: false,
+                isDisabled: false
+              },
+              {
+                val: 6,
+                text: '六月',
+                active: false,
+                isDisabled: false
+              },
+              {
+                val: 7,
+                text: '七月',
+                active: false,
+                isDisabled: false
+              },
+              {
+                val: 8,
+                text: '八月',
+                active: false,
+                isDisabled: false
+              },
+              {
+                val: 9,
+                text: '九月',
+                active: false,
+                isDisabled: false
+              },
+              {
+                val: 10,
+                text: '十月',
+                active: false,
+                isDisabled: false
+              },
+              {
+                val: 11,
+                text: '十一月',
+                active: false,
+                isDisabled: false
+              },
+              {
+                val: 12,
+                text: '十二月',
+                active: false,
+                isDisabled: false
+              }
+            ],
+            comMonth = curMonth.split('-'),
+            minDateYear = new Date(minDate).getFullYear(),
+            minDateMouth = new Date(minDate).getMonth(),
+            maxDateYear = new Date(maxDate).getFullYear(),
+            maxDateMouth = new Date(maxDate).getMonth();
+
+        // 检查时间范围
+        month.forEach((item,index) => {
+          if (curYear === parseInt(comMonth[0]) && item.val === parseInt(comMonth[1])){
+            item.active = true;
+          }
+          if (this.minTime){
+            if (curYear < minDateYear){
+              item.isDisabled = true;
+            }else if (curYear === minDateYear){
+              if (item.val < minDateMouth){
+                item.isDisabled = true;
+              }
+            }
+          }
+          if (this.maxTime){
+            if (curYear > maxDateYear){
+              item.isDisabled = true;
+            }else if (curYear === maxDateYear){
+              if (item.val > maxDateMouth){
+                item.isDisabled = true;
+              }
+            }
           }
         });
-        this.dateHours = timeArray;
-      }
-      if (type === 'Minutes'){
-        forArray.forEach(function (item,index) {
-          if ((_time + item) < 0){
-            timeArray[index].text = '';
-          }else if ((_time + item) >= 0 && (_time + item) < 10){
-            timeArray[index].text = '0' + (_time + item);
-          }else if ((_time + item) >= 10 && (_time + item) < 60){
-            timeArray[index].text = '' + (_time + item);
+        return month;
+      },
+      // month是加1的
+      dateFormat(year = '1995',month = 1,day = 1,hours = 0,minutes = 0,seconds = 0,isTime = false){
+        let rules = this.format,
+            handleYear = year.toString(),
+            handleMonth = parseInt(month),
+            handleDay = parseInt(day),
+            handleHours = parseInt(hours),
+            handleMinutes = parseInt(minutes),
+            handleSeconds = parseInt(seconds);
+        if (this.format === 'default'){
+          if (this.type === 'datetime'){
+            rules = 'YYYY-MM-DD hh:mm:ss'
           }
-        });
-        this.dateMinutes = timeArray;
-      }
-      if (type === 'Seconds'){
-        forArray.forEach(function (item,index) {
-          if ((_time + item) < 0){
-            timeArray[index].text = '';
-          }else if ((_time + item) >= 0 && (_time + item) < 10){
-            timeArray[index].text = '0' + (_time + item);
-          }else if ((_time + item) >= 10 && (_time + item) < 60){
-            timeArray[index].text = '' + (_time + item);
+          if (this.type === 'date'){
+            rules = 'YYYY-MM-DD'
           }
-        });
-        this.dateSeconds = timeArray;
+          if (this.type === 'month'){
+            rules = 'YYYY-MM'
+          }
+          if (this.type === 'year'){
+            rules = 'YYYY'
+          }
+        }
+
+        rules = rules.replace(/yyyy|YYYY/,handleYear);
+        rules = rules.replace(/yy|YY/,handleYear.substr(-2));
+        rules = rules.replace(/MM/,handleMonth > 9 ? handleMonth : '0' + handleMonth);
+        rules = rules.replace(/M/g,handleMonth);
+        rules = rules.replace(/dd|DD/,handleDay > 9 ? handleDay : '0' + handleDay);
+        rules = rules.replace(/d|D/g,handleDay);
+
+        rules = rules.replace(/hh|HH/,handleHours > 9 ? handleHours : '0' + handleHours);
+        rules = rules.replace(/h|H/g,handleHours);
+        rules = rules.replace(/mm/,handleMinutes > 9 ? handleMinutes : '0' + handleMinutes);
+        rules = rules.replace(/m/g,handleMinutes);
+        rules = rules.replace(/ss|SS/,handleSeconds > 9 ? handleSeconds : '0' + handleSeconds);
+        rules = rules.replace(/s|S/g,handleSeconds);
+        return rules;
+      },
+      initDateTime(){
+        let initYear = new Date(this.defaultTime).getFullYear(),
+            initMonth = new Date(this.defaultTime).getMonth() + 1,
+            initDay = new Date(this.defaultTime).getDate(),
+            initHours = new Date(this.defaultTime).getHours(),
+            initMinutes = new Date(this.defaultTime).getMinutes(),
+            initSeconds = new Date(this.defaultTime).getSeconds();
+        switch (this.type){
+          case 'datetime':
+            this.year = initYear;
+            this.month = initMonth;
+            this.currentDate = initYear + '-' + (initMonth > 9 ? initMonth : '0' + initMonth) + '-' + (initDay > 9 ? initDay : '0' + initDay);
+            this.currentTime = (initHours > 9 ? initHours : '0' + initHours) + ':' + (initMinutes > 9 ? initMinutes : '0'+initMinutes) + ':' + (initSeconds > 9 ? initSeconds : '0' + initSeconds);
+            this.current = this.dateFormat(initYear,initMonth,initDay,initHours,initMinutes,initSeconds);
+            this.changeTime('Hours',initHours);
+            this.changeTime('Minutes',initMinutes);
+            this.changeTime('Seconds',initSeconds);
+            break;
+          case 'date':
+            this.year = initYear;
+            this.month = initMonth;
+            this.day = initYear + '-' + initMonth + '-' + initDay;
+            this.current = this.dateFormat(initYear,initMonth,initDay);
+            break;
+          case 'month':
+            this.year2 = initYear;
+            this.month2 = initYear + '-' +initMonth;
+            this.current = this.dateFormat(initYear,initMonth);
+            break;
+          case 'year':
+            this.year3 = initYear - 11;
+            this.year4 = initYear;
+            this.year5 = initYear;
+            this.current = this.dateFormat(initYear);
+            break;
+        }
       }
     },
-    showPicker(){
-      if (this.pickerFlag){
+    mounted(){
+      // 点击外部取消弹窗
+      document.body.addEventListener('click',()=>{
         this.pickerFlag = false;
         this.timePickerFlag = false;
+      },false);
+
+      // 先检查是否有默认值，再初始化数据
+      // 初始化默认值
+      if (this.defaultTime){
+        this.initDateTime();
       }else {
-        this.pickerFlag = true;
+        // 没有默认值，初始化当前时间的值
+        switch (this.type){
+          case 'datetime':
+            this.year = new Date().getFullYear();
+            this.month = (new Date().getMonth())+1;
+            break;
+          case 'date':
+            this.year = new Date().getFullYear();
+            this.month = (new Date().getMonth())+1;
+            break;
+          case 'month':
+            this.year2 = new Date().getFullYear();
+            break;
+          case 'year':
+            this.year3 = new Date().getFullYear()-11;
+            this.year4 = new Date().getFullYear();
+            break;
+        }
       }
-    },
-    showTimePicker(){
-      if (this.timePickerFlag){
-        this.timePickerFlag = false;
-      }else {
-        this.timePickerFlag = true;
-      }
-    },
-    yearPreYear(){
-      this.year4 = this.year3 -1;
-      this.year3 = this.year4 -11;
-    },
-    yearNextYear(){
-      this.year3 = this.year4 +1;
-      this.year4 = this.year3 +11;
-    },
-    selectYear(year,index){
-      if (this.dateYear[index].isDisabled) return;
-      this.currentYear = year;
-      if (this.dateYear[index].active){
-        this.dateYear.forEach((item, index) => {
-          item.active = false;
-        });
-        this.dateYear[index].active = false;
-      }else {
-        this.dateYear.forEach((item, index) => {
-          item.active = false;
-        });
-        this.dateYear[index].active = true;
-      }
-    },
-    monthPreYear(){
-      this.year2 = this.year2 -1;
-    },
-    monthNextYear(){
-      this.year2 = this.year2 +1;
-    },
-    selectMonth(month,index){
-      if (this.dateMonth[index].isDisabled) return;
-      switch (month){
-        case '一月':
-          this.currentMonth = 1;
+
+      // 数据初始化
+      switch (this.type){
+        case 'datetime':
+          this.date = this.getCalendarData(this.year,this.month,this.currentDate,this.minTime,this.maxTime);
           break;
-        case '二月':
-          this.currentMonth = 2;
+        case 'date':
+          this.date = this.getCalendarData(this.year,this.month,this.day,this.minTime,this.maxTime);
           break;
-        case '三月':
-          this.currentMonth = 3;
+        case 'month':
+          this.dateMonth = this.getCalendarMonth(this.year2,this.month2,this.minTime,this.maxTime);
           break;
-        case '四月':
-          this.currentMonth = 4;
-          break;
-        case '五月':
-          this.currentMonth = 5;
-          break;
-        case '六月':
-          this.currentMonth = 6;
-          break;
-        case '七月':
-          this.currentMonth = 7;
-          break;
-        case '八月':
-          this.currentMonth = 8;
-          break;
-        case '九月':
-          this.currentMonth = 9;
-          break;
-        case '十月':
-          this.currentMonth = 10;
-          break;
-        case '十一月':
-          this.currentMonth = 11;
-          break;
-        case '十二月':
-          this.currentMonth = 12;
+        case 'year':
+          this.dateYear = this.getCalendarYear(this.year3,this.year4,this.year5,this.minTime,this.maxTime);
           break;
       }
 
-      if (this.dateMonth[index].active){
-        this.dateMonth.forEach((item, index) => {
-          item.active = false;
-        });
-        this.dateMonth[index].active = false;
-      }else {
-        this.dateMonth.forEach((item, index) => {
-          item.active = false;
-        });
-        this.dateMonth[index].active = true;
-      }
-    },
-    selectDateTime(){
-      this.currentTime = this.dateHours[2].text + ':' + this.dateMinutes[2].text + ':' + this.dateSeconds[2].text;
-      let currentVal = this.currentDate.split('-');
-      this.current = this.dateFormat(currentVal[0],currentVal[1],currentVal[2],this.dateHours[2].text,this.dateMinutes[2].text,this.dateSeconds[2].text);
-      this.timePickerFlag = false;
-    },
-    selectDate(day,index){
-      if (day){
-        if (this.date[index].isDisabled) return;
-        this.currentDate = this.year + '-' + this.month + '-' + day;
-        if (this.date[index].active){
-          this.date.forEach((item, index) => {
-            item.active = false;
-          });
-          this.date[index].active = false;
+      if (!this.placeholder){
+        if (this.type === 'date' || this.type === 'datetime'){
+          this.placeholder = '请选择日期';
+        }else if (this.type === 'month'){
+          this.placeholder = '请选择月份';
+        }else if (this.type === 'year'){
+          this.placeholder = '请选择年份';
         }else {
-          this.date.forEach((item, index) => {
-            item.active = false;
-          });
-          this.date[index].active = true;
+          this.placeholder = '';
         }
       }
     },
-    datePreYear(){
-      this.year = this.year -1;
-    },
-    datePreMonth(){
-      if (this.month === 1){
-        this.month = 12;
-        this.year = this.year -1;
-      }else {
-        this.month = this.month -1;
-      }
-
-    },
-    dateNextMonth(){
-      if (this.month === 12){
-        this.month = 1;
-        this.year = this.year + 1;
-      }else {
-        this.month = this.month +1;
-      }
-    },
-    dateNextYear(){
-      this.year = this.year +1;
-    },
-    isLeap(year){
-      if((year%4==0 && year%100!=0) || year%400==0){
-        return true;
-      }
-      else{
-        return false;
-      }
-    },
-    getWeek(dateString){
-      let date;
-      if(!dateString){
-        date = new Date;
-      }else{
-        let dateArray = dateString.split("-");
-        date = new Date(dateArray[0], parseInt(dateArray[1] - 1), dateArray[2]);
-      }
-      return "星期" + "日一二三四五六".charAt(date.getDay());
-    },
-    getCalendarData(year,month,minDate,maxDate){
-      let dateStrStart = year + '-' + month + '-1',
-          dateStrEnd = '';
-      let objNull = { val:'',active:false,isDisabled: false };
-      let monthDate = [31,0,31,30,31,30,31,31,30,31,30,31];
-      let currentMonthDate = [];
-      let minDateYear = new Date(minDate).getFullYear(),
-          minDateMouth = new Date(minDate).getMonth() + 1,
-          minDateDate = new Date(minDate).getDate(),
-          maxDateYear = new Date(maxDate).getFullYear(),
-          maxDateMouth = new Date(maxDate).getMonth() + 1,
-          maxDateDate = new Date(maxDate).getDate();
-      if (parseInt(month) === 2){
-        // 2月
-        if (this.isLeap(parseInt(year))){
-          // 是润年
-          monthDate[1] = 29;
-        }else {
-          // 是平年
-          monthDate[1] = 28;
-        }
-      }
-      let x = monthDate[parseInt(month) - 1];
-      for (let i=0;i<x;i++){
-        let obj = {};
-        obj.val = i+1;
-        obj.active = false;
-        obj.isDisabled = false;
-        // 添加minDate maxDate标记
-
-        if (minDate){
-          if (year < minDateYear){
-            obj.isDisabled = true;
-          }else if (year === minDateYear){
-            if (month < minDateMouth){
-              obj.isDisabled = true;
-            }else if (month === minDateMouth){
-              if (obj.val < minDateDate){
-                obj.isDisabled = true;
-              }
-            }
-          }
-        }
-        if (maxDate){
-          if (year > maxDateYear){
-            obj.isDisabled = true;
-          }else if (year === maxDateYear){
-            if (month > maxDateMouth){
-              obj.isDisabled = true;
-            }else if (month === maxDateMouth){
-              if (obj.val > maxDateDate){
-                obj.isDisabled = true;
-              }
-            }
-          }
-        }
-        currentMonthDate.push(obj);
-      }
-      dateStrEnd = year + '-' + month + '-' +monthDate[parseInt(month) - 1];
-      switch (this.getWeek(dateStrStart)){
-        case '星期日':
-          break;
-        case '星期一':
-          for (let i=0;i<1;i++){
-            currentMonthDate.unshift(objNull);
-          }
-          break;
-        case '星期二':
-          for (let i=0;i<2;i++){
-            currentMonthDate.unshift(objNull);
-          }
-          break;
-        case '星期三':
-          for (let i=0;i<3;i++){
-            currentMonthDate.unshift(objNull);
-          }
-          break;
-        case '星期四':
-          for (let i=0;i<4;i++){
-            currentMonthDate.unshift(objNull);
-          }
-          break;
-        case '星期五':
-          for (let i=0;i<5;i++){
-            currentMonthDate.unshift(objNull);
-          }
-          break;
-        case '星期六':
-          for (let i=0;i<6;i++){
-            currentMonthDate.unshift(objNull);
-          }
-          break;
-      }
-      switch (this.getWeek(dateStrEnd)){
-        case '星期日':
-          for (let i=0;i<6;i++){
-            currentMonthDate.push(objNull);
-          }
-          break;
-        case '星期一':
-          for (let i=0;i<5;i++){
-            currentMonthDate.push(objNull);
-          }
-          break;
-        case '星期二':
-          for (let i=0;i<4;i++){
-            currentMonthDate.push(objNull);
-          }
-          break;
-        case '星期三':
-          for (let i=0;i<3;i++){
-            currentMonthDate.push(objNull);
-          }
-          break;
-        case '星期四':
-          for (let i=0;i<2;i++){
-            currentMonthDate.push(objNull);
-          }
-          break;
-        case '星期五':
-          for (let i=0;i<1;i++){
-            currentMonthDate.push(objNull);
-          }
-          break;
-        case '星期六':
-          break;
-      }
-      return currentMonthDate;
-    },
-    getCalendarYear(start,end,minDate,maxDate){
-      let years = [];
-      let minDateYear = new Date(minDate).getFullYear(),
-          maxDateYear = new Date(maxDate).getFullYear();
-      for (let i=start;i<=end;i++){
-        let obj = {};
-        obj.val = i;
-        obj.active = false;
-        obj.isDisabled = false;
-        // 添加minDate maxDate标记
-        if (minDate){
-          if (obj.val < minDateYear){
-            obj.isDisabled = true;
-          }
-        }
-        if (maxDate){
-          if (obj.val > maxDateYear){
-            obj.isDisabled = true;
-          }
-        }
-        years.push(obj);
-      }
-      return years;
-    },
-    dateFormat(year = '1995',month = 1,day = 1,hours = 0,minutes = 0,seconds = 0,isTime = false){
-      let rules = this.format,
-          handleYear = year.toString(),
-          handleMonth = parseInt(month),
-          handleDay = parseInt(day),
-          handleHours = parseInt(hours),
-          handleMinutes = parseInt(minutes),
-          handleSeconds = parseInt(seconds);
-      if (this.format === 'default'){
+    watch:{
+      year(curVal,oldVal){
         if (this.type === 'datetime'){
-          rules = 'YYYY-MM-DD hh:mm:ss'
+          this.date = this.getCalendarData(curVal,this.month,this.currentDate,this.minTime,this.maxTime);
         }
         if (this.type === 'date'){
-          rules = 'YYYY-MM-DD'
+          this.date = this.getCalendarData(curVal,this.month,this.day,this.minTime,this.maxTime);
         }
-        if (this.type === 'month'){
-          rules = 'YYYY-MM'
+
+      },
+      month(curVal,oldVal){
+        if (this.type === 'datetime'){
+          this.date = this.getCalendarData(this.year,curVal,this.currentDate,this.minTime,this.maxTime);
         }
-        if (this.type === 'year'){
-          rules = 'YYYY'
+        if (this.type === 'date'){
+          this.date = this.getCalendarData(this.year,curVal,this.day,this.minTime,this.maxTime);
         }
+      },
+      year2(curVal,oldVal){
+        this.dateMonth = this.getCalendarMonth(curVal,this.month2,this.minTime,this.maxTime);
+      },
+      year3(curVal,oldVal){
+        this.dateYear = this.getCalendarYear(this.year3,this.year4,this.year5,this.minTime,this.maxTime);
       }
 
-      rules = rules.replace(/yyyy|YYYY/,handleYear);
-      rules = rules.replace(/yy|YY/,handleYear.substr(-2));
-      rules = rules.replace(/MM/,handleMonth > 9 ? handleMonth : '0' + handleMonth);
-      rules = rules.replace(/M/g,handleMonth);
-      rules = rules.replace(/dd|DD/,handleDay > 9 ? handleDay : '0' + handleDay);
-      rules = rules.replace(/d|D/g,handleDay);
-
-      rules = rules.replace(/hh|HH/,handleHours > 9 ? handleHours : '0' + handleHours);
-      rules = rules.replace(/h|H/g,handleHours);
-      rules = rules.replace(/mm/,handleMinutes > 9 ? handleMinutes : '0' + handleMinutes);
-      rules = rules.replace(/m/g,handleMinutes);
-      rules = rules.replace(/ss|SS/,handleSeconds > 9 ? handleSeconds : '0' + handleSeconds);
-      rules = rules.replace(/s|S/g,handleSeconds);
-      return rules;
-    }
-  },
-  mounted(){
-    document.body.addEventListener('click',()=>{
-      this.pickerFlag = false;
-      this.timePickerFlag = false;
-    },false);
-    this.date = this.getCalendarData(this.year,this.month,this.minTime,this.maxTime);
-    this.dateYear = this.getCalendarYear(this.year3,this.year4,this.minTime,this.maxTime);
-    //默认日期/月份/年份
-    if (this.type === 'datetime'){
-      let defaultDay = new Date(this.defaultTime).getDate(),
-          defaultHours = new Date(this.defaultTime).getHours(),
-          defaultMinutes = new Date(this.defaultTime).getMinutes(),
-          defaultSeconds = new Date(this.defaultTime).getSeconds();
-      this.currentDate = this.year + '-' + this.month + '-' + defaultDay;
-      this.currentTime = (defaultHours>9 ? defaultHours : '0'+defaultHours) + ':' + (defaultMinutes>9 ? defaultMinutes : '0'+defaultMinutes) + ':' + (defaultSeconds>9 ? defaultSeconds : '0'+defaultSeconds);
-      this.current = this.year + '-' + (this.month > 9 ? this.month : '0'+this.month) + '-' + (defaultDay> 9 ? defaultDay : '0'+defaultDay) + ' ' + this.currentTime;
-      this.date.forEach(function (item,index) {
-        if (defaultDay === item.val){
-          item.active = true;
-        }
-      });
-      this.changeTime('Hours',defaultHours);
-      this.changeTime('Minutes',defaultMinutes);
-      this.changeTime('Seconds',defaultSeconds);
-    }
-    if (this.type === 'date'){
-      let defaultDay = new Date(this.defaultTime).getDate();
-      this.currentDate = this.year + '-' + this.month + '-' + defaultDay;
-      this.current = this.year + '-' + (this.month > 9 ? this.month : '0'+this.month) + '-' + (defaultDay> 9 ? defaultDay : '0'+defaultDay);
-      this.date.forEach(function (item,index) {
-        if (defaultDay === item.val){
-          item.active = true;
-        }
-      })
-    }
-    if (this.type === 'month'){
-      let defaultMonth = new Date(this.defaultTime).getMonth();
-      this.currentMonth = defaultMonth +1;
-      this.current = this.year2 + '-' + (defaultMonth > 8 ? defaultMonth : '0' + (defaultMonth+1));
-      // minDate maxDate标记
-      let minDateYear = new Date(this.minTime).getFullYear(),
-          minDateMouth = new Date(this.minTime).getMonth(),
-          maxDateYear = new Date(this.maxTime).getFullYear(),
-          maxDateMouth = new Date(this.maxTime).getMonth();
-      let _this = this;
-      this.dateMonth.forEach(function (item,index) {
-        if (defaultMonth === index){
-          item.active = true;
-        }
-        // minDate maxDate标记
-        if (_this.year2 < minDateYear){
-          item.isDisabled = true;
-        }else if (_this.year2 === minDateYear){
-
-          if (index < minDateMouth){
-            item.isDisabled = true;
-          }
-        }
-        if (_this.year2 > maxDateYear){
-          item.isDisabled = true;
-        }else if (_this.year2 === maxDateYear){
-          if (index > maxDateMouth){
-            item.isDisabled = true;
-          }
-        }
-      });
-    }
-    if (this.type === 'year'){
-      let defaultYear = new Date(this.defaultTime).getFullYear();
-      this.currentYear = defaultYear;
-      this.current = defaultYear;
-      this.dateYear.forEach(function (item,index) {
-        if (defaultYear === item.val){
-          item.active = true;
-        }
-      })
-    }
-    if (!this.placeholder){
-      if (this.type === 'date' || this.type === 'datetime'){
-        this.placeholder = '请选择日期';
-      }else if (this.type === 'month'){
-        this.placeholder = '请选择月份';
-      }else if (this.type === 'year'){
-        this.placeholder = '请选择年份';
-      }else {
-        this.placeholder = '';
-      }
-    }
-  },
-  watch:{
-    year(curVal,oldVal){
-      this.date = this.getCalendarData(curVal,this.month,this.minTime,this.maxTime);
-    },
-    month(curVal,oldVal){
-      this.date = this.getCalendarData(this.year,curVal,this.minTime,this.maxTime);
-    },
-    currentTime(curVal,oldVal){
-      let currentVal1 = curVal.split(':');
-      let currentVal2 = this.currentDate.split('-');
-
-      this.$emit('change',this.dateFormat(currentVal2[0],currentVal2[1],currentVal2[2],currentVal1[0],currentVal1[1],currentVal1[2]));
-      // this.$emit('change', this.current + ' ' +curVal);
-    },
-    currentDate(curVal,oldVal){
-      let currentVal = curVal.split('-'),
-          currentYear = currentVal[0],
-          currentMonth = parseInt(currentVal[1])>9 ? currentVal[1] : '0' + currentVal[1],
-          currentDate = parseInt(currentVal[2])>9 ? currentVal[2] : '0' + currentVal[2];
-      let currentVal2 = this.currentTime.split(':');
-      if (this.type === 'date'){
-        // this.$emit('change',this.current);
-        this.current = this.dateFormat(currentVal[0],currentVal[1],currentVal[2]);
-        this.$emit('change',this.dateFormat(currentVal[0],currentVal[1],currentVal[2]));
-      }
-      if (this.type === 'datetime'){
-        this.current = this.dateFormat(currentVal[0],currentVal[1],currentVal[2],currentVal2[0],currentVal2[1],currentVal2[2]);
-        this.$emit('change', this.dateFormat(currentVal[0],currentVal[1],currentVal[2],currentVal2[0],currentVal2[1],currentVal2[2]));
-      }
-
-    },
-    currentMonth(curVal,oldVal){
-      // this.current = this.year2 + '-' + (curVal>9 ? curVal : '0' + curVal);
-      this.current = this.dateFormat(this.year2,curVal);
-      this.$emit('change', this.current);
-    },
-    currentYear(curVal,oldVal){
-      // this.current = curVal;
-      this.current = this.dateFormat(curVal);
-      this.$emit('change', this.current);
-    },
-    year2(curVal,oldVal){
-      this.dateMonth = [
-        {
-          val: '一月',
-          active: false,
-          isDisabled: false
-        },
-        {
-          val: '二月',
-          active: false,
-          isDisabled: false
-        },
-        {
-          val: '三月',
-          active: false,
-          isDisabled: false
-        },
-        {
-          val: '四月',
-          active: false,
-          isDisabled: false
-        },
-        {
-          val: '五月',
-          active: false,
-          isDisabled: false
-        },
-        {
-          val: '六月',
-          active: false,
-          isDisabled: false
-        },
-        {
-          val: '七月',
-          active: false,
-          isDisabled: false
-        },
-        {
-          val: '八月',
-          active: false,
-          isDisabled: false
-        },
-        {
-          val: '九月',
-          active: false,
-          isDisabled: false
-        },
-        {
-          val: '十月',
-          active: false,
-          isDisabled: false
-        },
-        {
-          val: '十一月',
-          active: false,
-          isDisabled: false
-        },
-        {
-          val: '十二月',
-          active: false,
-          isDisabled: false
-        }
-      ];
-      // minDate maxDate标记
-      let minDateYear = new Date(this.minTime).getFullYear(),
-          minDateMouth = new Date(this.minTime).getMonth(),
-          maxDateYear = new Date(this.maxTime).getFullYear(),
-          maxDateMouth = new Date(this.maxTime).getMonth();
-      let _this = this;
-      this.dateMonth.forEach(function (item,index) {
-        // minDate maxDate标记
-        if (_this.year2 < minDateYear){
-          item.isDisabled = true;
-        }else if (_this.year2 === minDateYear){
-          if (index < minDateMouth){
-            item.isDisabled = true;
-          }
-        }
-        if (_this.year2 > maxDateYear){
-          item.isDisabled = true;
-        }else if (_this.year2 === maxDateYear){
-          if (index > maxDateMouth){
-            item.isDisabled = true;
-          }
-        }
-      });
-    },
-    year3(curVal,oldVal){
-      this.dateYear = this.getCalendarYear(this.year3,this.year4,this.minTime,this.maxTime);
-    },
-    year4(curVal,oldVal){
-      this.dateYear = this.getCalendarYear(this.year3,this.year4,this.minTime,this.maxTime);
     }
   }
-}
 </script>
+
 
 <style scoped>
   .picker-ipt{
-  box-sizing: border-box;
-  position: relative;
-  border-radius: 4px;
-  border: 1px solid #dcdfe6;
-  color: #606266;
-  height: 38px;
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-}
-.picker-ipt:hover{
-  border-color: #409eff;
-}
-.picker-ipt-ico{
-  width: 30px;
-}
-.picker-ipt-ico i{
-  display: block;
-  padding: 0px 8px;
-  width: 50%;
-  color: #8a8a8a;
-}
-.picker-ipt-text{
-  box-sizing: border-box;
-  padding-left: 10px;
-  font-size: 13px;
-  color: #606266;
-  text-align: left;
-}
-.picker-ipt-placeholder{
-  color: #aaa;
-}
-.picker{
-  position: absolute;
-  left: 0px;
-  top: 37px;
-  max-height: 407px;
-  z-index: 1000;
-  width: 325px;
-  border: 1px solid #e4e7ed;
-  box-shadow: 0 2px 12px 0 rgba(0,0,0,.1);
-  background: #fff;
-  border-radius: 4px;
-  padding: 10px 10px 20px 10px;
-}
-.picker-header{
-  display: flex;
-  align-items: center;
-  padding-bottom: 20px;
-}
-.picker-header-item{
-  box-sizing: border-box;
-  /*flex: 1;*/
-  margin: 0px 5px;
-  cursor: pointer;
-  width: 15px;
-  height: 15px;
-}
-.picker-header-item i{
-  font-size: 13px;
-  display: block;
-  color: #8a8a8a;
-}
-.picker-header-item i:hover{
-  color: #409eff;
-}
-.picker-header-date{
-  flex: 4;
-  cursor: pointer;
-  text-align: center;
-}
-.picker-week{
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  padding-bottom: 20px;
-}
-.picker-week-item{
-  width: 14.28%;
-  text-align: center;
-}
-.picker-date{
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  border-top: 1px solid #eee;
-}
-.picker-date-item{
-  width: 14.28%;
-  height: 24px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-top: 20px;
-}
-.picker-month-item{
-  width: 25%;
-  height: 24px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-top: 20px;
-}
-.picker-year-item{
-  width: 25%;
-  height: 24px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-top: 20px;
-}
-.picker-date-item-text{
-  display: inline-block;
-  width: 24px;
-  line-height: 24px;
-  color: #333;
-  font-size: 13px;
-  cursor: pointer;
-  user-select: none;
-  text-align: center;
-}
-.picker-month-item-text,.picker-year-item-text{
-  display: inline-block;
-  padding: 2px 5px;
-  color: #333;
-  font-size: 13px;
-  cursor: pointer;
-  user-select: none;
-  text-align: center;
-}
-.current-date{
-  border-radius: 50%;
-  background: #409eff;
-  color: #fff;
-}
-.disabled-current-date,
-.disabled-current-month,
-.disabled-current-year{
-  color: #999;
-  cursor: not-allowed;
-}
-.disabled-current-date:hover,
-.disabled-current-month:hover,
-.disabled-current-year:hover{
-  color: #999!important;
-}
-.current-month,.current-year{
-  border-radius: 3px;
-  background: #409eff;
-  color: #fff;
-}
-.picker-date-item-text:hover{
-  color: #409eff;
-}
-.current-date:hover{
-  color: #fff;
-}
-.picker-month-item-text:hover,
-.picker-year-item-text:hover{
-  color: #409eff;
-}
-.current-month:hover,
-.current-year:hover{
-  color: #fff;
-}
-
-.picker-datetime{
-  display: flex;
-  margin-bottom: 10px;
-}
-.picker-datetime-item{
-  flex: 1;
-  padding: 5px;
-  text-align: center;
-}
-
-.picker-datetime-item span{
-  display: inline-block;
-  width: 100%;
-  border-radius: 4px;
-  border: 1px solid #dcdfe6;
-  height: 32px;
-  line-height: 32px;
-  cursor: pointer;
-  text-align: center;
-  font-size: 13px;
-}
-.picker-datetime-item span:hover{
-  border: 1px solid #409eff;
-}
-
-.picker-datetime-item.timePick{
-  position: relative;
-}
-
-.picker-datetime-time{
-  position: absolute;
-  width: 141px;
-  border: 1px solid #e4e7ed;
-  box-shadow: 0 2px 12px 0 rgba(0,0,0,.1);
-  padding: 5px 10px;
-  background: #fff;
-}
-.datetime-content{
-  display: flex;
-}
-.datetime-content-grounp{
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-}
-.datetime-content-item{
-  flex: none;
-  height: 35px;
-  line-height: 35px;
-  font-size: 14px;
-  color: #ccc;
-  cursor: pointer;
-  text-align: center;
-}
-.datetime-content-item-current{
-  border-top: 1px solid #409eff;
-  border-bottom: 1px solid #409eff;
-  color: #409eff;
-}
-.datetime-foot{
-  display: flex;
-  flex-direction: row-reverse;
-}
-.datetime-foot-btn{
-  padding: 5px 5px 5px 0px;
-  margin-left: 5px;
-  font-size: 13px;
-  color: #555;
-  background: #fff;
-  cursor: pointer;
-}
-.datetime-foot-btn.success{
-  color: #409eff;
-}
+    box-sizing: border-box;
+    position: relative;
+    border-radius: 4px;
+    border: 1px solid #dcdfe6;
+    color: #606266;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+  }
+  .picker-ipt:hover{
+    border-color: #409eff;
+  }
+  .picker-ipt-ico{
+    width: 30px;
+  }
+  .picker-ipt-ico i{
+    display: block;
+    padding: 0px 8px;
+    width: 50%;
+    color: #8a8a8a;
+  }
+  .picker-ipt-text{
+    box-sizing: border-box;
+    padding-left: 10px;
+    font-size: 13px;
+    color: #606266;
+    text-align: left;
+  }
+  .picker-ipt-placeholder{
+    color: #aaa;
+  }
+  .picker{
+    position: absolute;
+    left: 0px;
+    top: 37px;
+    max-height: 407px;
+    z-index: 1000;
+    width: 280px;
+    border: 1px solid #e4e7ed;
+    box-shadow: 0 2px 12px 0 rgba(0,0,0,.1);
+    background: #fff;
+    border-radius: 4px;
+    padding: 10px 10px 20px 10px;
+  }
+  .picker-header{
+    display: flex;
+    align-items: center;
+    padding-bottom: 10px;
+  }
+  .picker-header-item{
+    box-sizing: border-box;
+    /*flex: 1;*/
+    margin: 0px 5px;
+    cursor: pointer;
+    width: 15px;
+    height: 15px;
+  }
+  .picker-header-item i{
+    font-size: 13px;
+    display: block;
+    color: #8a8a8a;
+  }
+  .picker-header-item i:hover{
+    color: #409eff;
+  }
+  .picker-header-date{
+    flex: 4;
+    cursor: pointer;
+    text-align: center;
+  }
+  .picker-week{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    padding-bottom: 10px;
+  }
+  .picker-week-item{
+    width: 14.28%;
+    text-align: center;
+  }
+  .picker-date{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    border-top: 1px solid #eee;
+  }
+  .picker-date-item{
+    width: 14.28%;
+    height: 24px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 20px;
+  }
+  .picker-month-item{
+    width: 25%;
+    height: 24px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 20px;
+  }
+  .picker-year-item{
+    width: 25%;
+    height: 24px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 20px;
+  }
+  .picker-date-item-text{
+    display: inline-block;
+    width: 24px;
+    line-height: 24px;
+    color: #333;
+    font-size: 13px;
+    cursor: pointer;
+    user-select: none;
+    text-align: center;
+  }
+  .picker-month-item-text,.picker-year-item-text{
+    display: inline-block;
+    padding: 2px 5px;
+    color: #333;
+    font-size: 13px;
+    cursor: pointer;
+    user-select: none;
+    text-align: center;
+  }
+  .current-date{
+    border-radius: 50%;
+    background: #409eff;
+    color: #fff;
+  }
+  .disabled-current-date,
+  .disabled-current-month,
+  .disabled-current-year{
+    color: #999;
+    cursor: not-allowed;
+  }
+  .disabled-current-date:hover,
+  .disabled-current-month:hover,
+  .disabled-current-year:hover{
+    color: #999!important;
+  }
+  .current-month,.current-year{
+    border-radius: 3px;
+    background: #409eff;
+    color: #fff;
+  }
+  .picker-date-item-text:hover{
+    color: #409eff;
+  }
+  .current-date:hover{
+    color: #fff;
+  }
+  .picker-month-item-text:hover,
+  .picker-year-item-text:hover{
+    color: #409eff;
+  }
+  .current-month:hover,
+  .current-year:hover{
+    color: #fff;
+  }
+  
+  .picker-datetime{
+    display: flex;
+    margin-bottom: 10px;
+  }
+  .picker-datetime-item{
+    flex: 1;
+    padding: 5px;
+    text-align: center;
+  }
+  
+  .picker-datetime-item span{
+    display: inline-block;
+    width: 100%;
+    border-radius: 4px;
+    border: 1px solid #dcdfe6;
+    height: 32px;
+    line-height: 32px;
+    cursor: pointer;
+    text-align: center;
+    font-size: 13px;
+  }
+  .picker-datetime-item span:hover{
+    border: 1px solid #409eff;
+  }
+  
+  .picker-datetime-item.timePick{
+    position: relative;
+  }
+  
+  .picker-datetime-time{
+    position: absolute;
+    width: 141px;
+    border: 1px solid #e4e7ed;
+    box-shadow: 0 2px 12px 0 rgba(0,0,0,.1);
+    padding: 5px 10px;
+    background: #fff;
+  }
+  .datetime-content{
+    display: flex;
+  }
+  .datetime-content-grounp{
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+  }
+  .datetime-content-item{
+    flex: none;
+    height: 35px;
+    line-height: 35px;
+    font-size: 14px;
+    color: #ccc;
+    cursor: pointer;
+    text-align: center;
+  }
+  .datetime-content-item-current{
+    border-top: 1px solid #409eff;
+    border-bottom: 1px solid #409eff;
+    color: #409eff;
+  }
+  .datetime-foot{
+    display: flex;
+    flex-direction: row-reverse;
+  }
+  .datetime-foot-btn{
+    padding: 5px 5px 5px 0px;
+    margin-left: 5px;
+    font-size: 13px;
+    color: #555;
+    background: #fff;
+    cursor: pointer;
+  }
+  .datetime-foot-btn.success{
+    color: #409eff;
+  }
 </style>
-
-
