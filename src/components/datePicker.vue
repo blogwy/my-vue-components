@@ -1,37 +1,52 @@
 <template>
-  <div class="picker-ipt" @click.stop="showPicker" :style="{ width: pickerWidth + 'px' }">
-    <div class="picker-ipt-ico">
-      <i class="iconfont iconrili"></i>
+  <div class="picker-ipt" ref="pickerIpt" :style="{ width: pickerWidth + 'px' }">
+    <div class="picker-ipt-container" @click.stop="showPicker">
+      <div class="picker-ipt-ico">
+        <i class="iconfont iconrili"></i>
+      </div>
+      <div :style="{ position: 'relative',width: (pickerWidth - 32) + 'px' }">
+        <input
+            ref="picker1"
+            type="text"
+            :class="['picker-ipt-text',rules ? 'v-validate' : '']"
+            :style="{ width: pickerWidth + 'px',height: pickerHeight + 'px' }"
+            readonly
+            v-validate="rules"
+            :value="current"
+            :placeholder="placeholder"
+            @input="$emit('input', $event.target.value)"/>
+        <input ref="picker2" type="text" class="picker-ipt-text2" readonly
+               :style="{ height: pickerHeight + 'px' }"
+               v-model="current" />
+      </div>
     </div>
-    <div class="picker-ipt-text">
-      {{current}}
-      <span v-if="!current" class="picker-ipt-placeholder">{{placeholder}}</span>
-    </div>
-    <div v-if="pickerFlag" class="picker" @click.stop>
+    
+    <div v-if="pickerFlag" @click.stop ref="pickers" class="picker" :style="{ top: itemsDirectionTop + 'px',left: itemsDirectionLeft + 'px'  }">
       <div v-if="type === 'datetime'" class="picker-datetime">
         <div class="picker-datetime-item"><span>{{currentDate ? currentDate : '请选择日期'}}</span></div>
         <div class="picker-datetime-item timePick" @click.stop="showTimePicker">
           <span>{{currentTime ? currentTime : '请选择时间'}}</span>
           <div class="picker-datetime-time" v-if="timePickerFlag">
             <div class="datetime-content">
-              <div class="datetime-content-grounp">
-                <div :class="['datetime-content-item',item.current ? 'datetime-content-item-current' : '']"
+              <div ref="grounp1" class="datetime-content-grounp">
+                <div :class="['datetime-content-item1',item.current ? 'datetime-content-item1-current' : '']"
                      v-for="(item,index) in dateHours" @click.stop="changeTime('Hours',item.text)">
                   {{item.text}}
                 </div>
               </div>
-              <div class="datetime-content-grounp">
-                <div :class="['datetime-content-item',item.current ? 'datetime-content-item-current' : '']"
+              <div ref="grounp2" class="datetime-content-grounp">
+                <div :class="['datetime-content-item2',item.current ? 'datetime-content-item2-current' : '']"
                      v-for="(item,index) in dateMinutes" @click.stop="changeTime('Minutes',item.text)">
                   {{item.text}}
                 </div>
               </div>
-              <div class="datetime-content-grounp">
-                <div :class="['datetime-content-item',item.current ? 'datetime-content-item-current' : '']"
+              <div ref="grounp3" class="datetime-content-grounp">
+                <div :class="['datetime-content-item3',item.current ? 'datetime-content-item3-current' : '']"
                      v-for="(item,index) in dateSeconds" @click.stop="changeTime('Seconds',item.text)">
                   {{item.text}}
                 </div>
               </div>
+              <div class="datetime-content-select"></div>
             </div>
             <div class="datetime-foot">
               <div class="datetime-foot-btn success" @click.stop="selectDateTime">确定</div>
@@ -83,10 +98,10 @@
           <span :class="['picker-date-item-text',{'current-date' : item.active},{'disabled-current-date' : item.isDisabled}]" @click.stop="selectDate(item.val,index)">{{item.text}}</span>
         </div>
         <div class="picker-month-item" v-if="type === 'month'" v-for="(item,index) in dateMonth">
-          <span :class="['picker-month-item-text',{'current-month' : item.active},{'disabled-current-month' : item.isDisabled}]" @click="selectMonth(item.val,index)">{{item.text}}</span>
+          <span :class="['picker-month-item-text',{'current-month' : item.active},{'disabled-current-month' : item.isDisabled}]" @click.stop="selectMonth(item.val,index)">{{item.text}}</span>
         </div>
         <div class="picker-year-item" v-if="type === 'year'" v-for="(item,index) in dateYear">
-          <span :class="['picker-year-item-text',{'current-year' : item.active},{'disabled-current-year' : item.isDisabled}]" @click="selectYear(item.val,index)">{{item.text}}</span>
+          <span :class="['picker-year-item-text',{'current-year' : item.active},{'disabled-current-year' : item.isDisabled}]" @click.stop="selectYear(item.val,index)">{{item.text}}</span>
         </div>
       </div>
     </div>
@@ -105,6 +120,14 @@
         type: Number,
         default: 0
       },
+      // 是否禁止
+      isDisabled:{
+        type: Boolean,
+        default: false
+      },
+      value: {
+        default: ""
+      },
       // 开始时间，时间戳，默认无限制
       minTime: {
         type: Number,
@@ -119,6 +142,9 @@
       format: {
         type: String,
         default: 'default'
+      },
+      pickerRule:{
+        type: Object
       },
       // picker宽度
       pickerWidth: {
@@ -135,12 +161,17 @@
               return 155;
           }
         }
+      },
+      pickerHeight: {
+        type: Number,
+        default: 34
       }
     },
     data() {
       return {
         pickerFlag: false,
         timePickerFlag: false,
+        rules: this.pickerRule,
         // 当前值
         current: '',
         type: this.mode,
@@ -148,72 +179,9 @@
         // type=datetime
         currentTime: '',
         currentDate: '',
-        dateHours: [
-          {
-            text: '',
-            current: false
-          },
-          {
-            text: '',
-            current: false
-          },
-          {
-            text: '00',
-            current: true
-          },
-          {
-            text: '01',
-            current: false
-          },
-          {
-            text: '02',
-            current: false
-          }
-        ],
-        dateMinutes: [
-          {
-            text: '',
-            current: false
-          },
-          {
-            text: '',
-            current: false
-          },
-          {
-            text: '00',
-            current: true
-          },
-          {
-            text: '01',
-            current: false
-          },
-          {
-            text: '02',
-            current: false
-          }
-        ],
-        dateSeconds: [
-          {
-            text: '',
-            current: false
-          },
-          {
-            text: '',
-            current: false
-          },
-          {
-            text: '00',
-            current: true
-          },
-          {
-            text: '01',
-            current: false
-          },
-          {
-            text: '02',
-            current: false
-          }
-        ],
+        dateHours: [],
+        dateMinutes: [],
+        dateSeconds: [],
         // type=date
         year: '',
         month: '',
@@ -232,71 +200,91 @@
         year4: '',
         // 已选中的项
         year5: '',
-        dateYear: []
+        dateYear: [],
+        // 日历显示方向正值为下，负值为上
+        itemsDirectionTop: this.pickerHeight + 2,
+        itemsDirectionLeft: 0,
+        scroll1: 0,
+        scroll2: 0,
+        scroll3: 0
       }
     },
     methods: {
-      changeTime(type,time){
-        let timeArray = [
-          {
-            text: '',
-            current: false
-          },
-          {
-            text: '',
-            current: false
-          },
-          {
-            text: '',
-            current: true
-          },
-          {
-            text: '',
-            current: false
-          },
-          {
-            text: '',
-            current: false
+      initTimeItems(){
+        let curHours,curMinutes,curSeconds;
+        if (this.defaultTime){
+          let timeArr = this.formatTimestamp({ timestamp: this.defaultTime,rules: 'hh:mm:ss' });
+          curHours = timeArr.split(':')[0];
+          curMinutes = timeArr.split(':')[1];
+          curSeconds = timeArr.split(':')[2];
+          console.log(timeArr);
+        }
+        let hours = [],minutes = [],seconds = [];
+        for (let i=0;i<24;i++){
+          let obj1 = {};
+          obj1.text = i > 9 ? i : '0' + i;
+          obj1.current = false;
+          if (curHours && curHours == obj1.text){
+            obj1.current = true;
           }
-        ];
-        let _time = parseInt(time);
-        let forArray = [-2,-1,0,1,2];
-        if (!_time) return;
-        if (type === 'Hours'){
-          forArray.forEach(function (item,index) {
-            if ((_time + item) < 0){
-              timeArray[index].text = '';
-            }else if ((_time + item) >= 0 && (_time + item) < 10){
-              timeArray[index].text = '0' + (_time + item);
-            }else if ((_time + item) >= 10 && (_time + item) < 24){
-              timeArray[index].text = '' + (_time + item);
-            }
-          });
-          this.dateHours = timeArray;
+          hours.push(obj1);
         }
-        if (type === 'Minutes'){
-          forArray.forEach(function (item,index) {
-            if ((_time + item) < 0){
-              timeArray[index].text = '';
-            }else if ((_time + item) >= 0 && (_time + item) < 10){
-              timeArray[index].text = '0' + (_time + item);
-            }else if ((_time + item) >= 10 && (_time + item) < 60){
-              timeArray[index].text = '' + (_time + item);
-            }
-          });
-          this.dateMinutes = timeArray;
+        hours.unshift({text: '',current: false},{text: '',current: false});
+        hours.push({text: '',current: false},{text: '',current: false});
+
+        for (let i=0;i<60;i++){
+          let obj1 = {};
+          obj1.text = i > 9 ? i : '0' + i;
+          obj1.current = false;
+          if (curMinutes && curMinutes == obj1.text){
+            obj1.current = true;
+          }
+          minutes.push(obj1);
         }
-        if (type === 'Seconds'){
-          forArray.forEach(function (item,index) {
-            if ((_time + item) < 0){
-              timeArray[index].text = '';
-            }else if ((_time + item) >= 0 && (_time + item) < 10){
-              timeArray[index].text = '0' + (_time + item);
-            }else if ((_time + item) >= 10 && (_time + item) < 60){
-              timeArray[index].text = '' + (_time + item);
-            }
-          });
-          this.dateSeconds = timeArray;
+        minutes.unshift({text: '',current: false},{text: '',current: false});
+        minutes.push({text: '',current: false},{text: '',current: false});
+
+        for (let i=0;i<60;i++){
+          let obj1 = {};
+          obj1.text = i > 9 ? i : '0' + i;
+          obj1.current = false;
+          if (curSeconds && curSeconds == obj1.text){
+            obj1.current = true;
+          }
+          seconds.push(obj1);
+        }
+        seconds.unshift({text: '',current: false},{text: '',current: false});
+        seconds.push({text: '',current: false},{text: '',current: false});
+
+        this.dateHours = hours;
+        this.dateMinutes = minutes;
+        this.dateSeconds = seconds;
+      },
+      changeTime(type,time){
+        if (time){
+          let _time = parseInt(time);
+          if (type === 'Hours'){
+            console.log(this.$refs.grounp1);
+            this.$refs.grounp1.scrollTo(0,35*_time);
+            this.dateHours.forEach((item,index) => {
+              item.current = false;
+            });
+            this.dateHours[_time+2].current = true;
+          }
+          if (type === 'Minutes'){
+            this.$refs.grounp2.scrollTo(0,35*_time);
+            this.dateMinutes.forEach((item,index) => {
+              item.current = false;
+            });
+            this.dateMinutes[_time+2].current = true;
+          }
+          if (type === 'Seconds'){
+            this.$refs.grounp3.scrollTo(0,35*_time);
+            this.dateSeconds.forEach((item,index) => {
+              item.current = false;
+            });
+            this.dateSeconds[_time+2].current = true;
+          }
         }
       },
       showPicker(){
@@ -304,7 +292,36 @@
           this.pickerFlag = false;
           this.timePickerFlag = false;
         }else {
-          this.pickerFlag = true;
+          if (!this.isDisabled){
+            this.pickerFlag = true;
+            // 关闭其他
+            this.$parent.$children.forEach((item,index) => {
+              if (item._uid !== this._uid &&  typeof(item.pickerFlag) !== "undefined"){
+                item.pickerFlag = false
+              }
+            });
+            // 判断日历显示方向
+            this.$nextTick(() => {
+              let winHeight = window.innerHeight,
+                  winWidth = window.innerWidth,
+                  pickerOffsetTop = this.getOffsetTop(this.$refs.pickerIpt),
+                  pickerOffsetLeft = this.getOffsetLeft(this.$refs.pickerIpt),
+                  pickerHeight = this.$refs.pickers.offsetHeight,
+                  pickerWidth = this.$refs.pickers.offsetWidth;
+              // 判断top
+              if ((winHeight - pickerOffsetTop - this.pickerHeight) > (pickerHeight + 20)){
+                this.itemsDirectionTop = this.pickerHeight + 2;
+              }else {
+                this.itemsDirectionTop = (pickerHeight+2) * -1;
+              }
+              // 判断left
+              if ((winWidth - pickerOffsetLeft - this.pickerWidth) > (pickerHeight + 20)){
+                this.itemsDirectionLeft = 0;
+              }else {
+                this.itemsDirectionLeft = (pickerWidth - this.pickerWidth) * -1;
+              }
+            })
+          }
         }
       },
       showTimePicker(){
@@ -312,6 +329,105 @@
           this.timePickerFlag = false;
         }else {
           this.timePickerFlag = true;
+          // 监听scroll
+          let _this = this;
+          let timer1 = false,timer2 = false,timer3 = false;
+          this.$nextTick(() => {
+            // 如果没有选择日期则自动选择当前
+            if (!this.currentDate){
+              // 当前天
+              let currentDay = new Date().getDate();
+              this.current = this.dateFormat(this.year,this.month,currentDay,0,0,0);
+              // test
+              this.$refs.picker1.value = this.current;
+              let element = this.$refs.picker1;
+              let evObj = document.createEvent('Event');
+              evObj.initEvent('input', true, true);
+              element.dispatchEvent(evObj);
+              // css控制
+              this.date.forEach((item,index) => {
+                if (item.val == currentDay){
+                  item.active = true;
+                }
+              });
+              this.$emit('change',this.current);
+              this.currentDate = this.year + '-' + (this.month > 9 ? this.month : '0' + this.month) + '-' + (currentDay > 9 ? currentDay : '0' + currentDay);
+              this.currentTime = '00:00:00';
+              // 初始化time值
+              this.dateHours.forEach((item,index) => {
+                if (item.text === '00'){
+                  item.current = true;
+                }
+              });
+              this.dateMinutes.forEach((item,index) => {
+                if (item.text === '00'){
+                  item.current = true;
+                }
+              });
+              this.dateSeconds.forEach((item,index) => {
+                if (item.text === '00'){
+                  item.current = true;
+                }
+              });
+            }
+            // 初始化已选择值
+            // 时
+            this.dateHours.forEach((item,index) => {
+              if (item.current){
+                _this.$refs.grounp1.scrollTo(0,parseInt(item.text)*35);
+              }
+            });
+            // 分
+            this.dateMinutes.forEach((item,index) => {
+              if (item.current) {
+                _this.$refs.grounp2.scrollTo(0,parseInt(item.text)*35);
+              }
+            });
+            // 秒
+            this.dateSeconds.forEach((item,index) => {
+              if (item.current){
+                _this.$refs.grounp3.scrollTo(0,parseInt(item.text)*35);
+              }
+            });
+
+            // 监听滚动事件
+            // 时
+            this.$refs.grounp1.addEventListener('scroll',function () {
+              let top = _this.$refs.grounp1.scrollTop;
+              clearTimeout(timer1);
+              timer1 = setTimeout(function(){
+                _this.$refs.grounp1.scrollTo(0,Math.round(top/35)*35);
+                _this.dateHours.forEach((item,index) => {
+                  item.current = false;
+                });
+                _this.dateHours[Math.round(top/35)+2].current = true;
+              }, 300);
+            });
+            // 分
+            this.$refs.grounp2.addEventListener('scroll',function () {
+              let top = _this.$refs.grounp2.scrollTop;
+              clearTimeout(timer2);
+              timer2 = setTimeout(function(){
+                _this.$refs.grounp2.scrollTo(0,Math.round(top/35)*35);
+                _this.dateMinutes.forEach((item,index) => {
+                  item.current = false;
+                });
+                _this.dateMinutes[Math.round(top/35)+2].current = true;
+              }, 300);
+            });
+            // 秒
+            this.$refs.grounp3.addEventListener('scroll',function () {
+              let top = _this.$refs.grounp3.scrollTop;
+              clearTimeout(timer3);
+              timer3 = setTimeout(function(){
+                _this.$refs.grounp3.scrollTo(0,Math.round(top/35)*35);
+                _this.dateSeconds.forEach((item,index) => {
+                  item.current = false;
+                });
+                _this.dateSeconds[Math.round(top/35)+2].current = true;
+              }, 300);
+            });
+          });
         }
       },
       yearPreYear(){
@@ -327,6 +443,12 @@
 
         // 当前值
         this.current = this.dateFormat(year);
+        // test
+        this.$refs.picker1.value = this.current;
+        let element = this.$refs.picker1;
+        let evObj = document.createEvent('Event');
+        evObj.initEvent('input', true, true);
+        element.dispatchEvent(evObj);
         // css控制
         if (this.dateYear[index].active){
           this.dateYear.forEach((item, index) => {
@@ -352,6 +474,12 @@
         if (this.dateMonth[index].isDisabled) return;
         // 当前值
         this.current = this.dateFormat(this.year2,month);
+        // test
+        this.$refs.picker1.value = this.current;
+        let element = this.$refs.picker1;
+        let evObj = document.createEvent('Event');
+        evObj.initEvent('input', true, true);
+        element.dispatchEvent(evObj);
         // css控制
         if (this.dateMonth[index].active){
           this.dateMonth.forEach((item, index) => {
@@ -368,9 +496,31 @@
         }
       },
       selectDateTime(){
-        this.currentTime = this.dateHours[2].text + ':' + this.dateMinutes[2].text + ':' + this.dateSeconds[2].text;
+        let hours,minutes,seconds;
+        this.dateHours.forEach((item,index) => {
+          if (item.current){
+            hours = item.text;
+          }
+        });
+        this.dateMinutes.forEach((item,index) => {
+          if (item.current){
+            minutes = item.text;
+          }
+        });
+        this.dateSeconds.forEach((item,index) => {
+          if (item.current){
+            seconds = item.text;
+          }
+        });
+        this.currentTime = hours + ':' + minutes + ':' + seconds;
         let currentVal = this.currentDate.split('-');
-        this.current = this.dateFormat(currentVal[0],currentVal[1],currentVal[2],this.dateHours[2].text,this.dateMinutes[2].text,this.dateSeconds[2].text);
+        this.current = this.dateFormat(currentVal[0],currentVal[1],currentVal[2],hours,minutes,seconds);
+        // test
+        this.$refs.picker1.value = this.current;
+        let element = this.$refs.picker1;
+        let evObj = document.createEvent('Event');
+        evObj.initEvent('input', true, true);
+        element.dispatchEvent(evObj);
         this.$emit('change',this.current);
         this.timePickerFlag = false;
       },
@@ -380,6 +530,12 @@
           if (this.date[index].isDisabled) return;
           // 当前值
           this.current = this.dateFormat(this.year,this.month,day);
+          // test
+          this.$refs.picker1.value = this.current;
+          let element = this.$refs.picker1;
+          let evObj = document.createEvent('Event');
+          evObj.initEvent('input', true, true);
+          element.dispatchEvent(evObj);
           // css控制
           if (this.date[index].active){
             this.date.forEach((item, index) => {
@@ -399,6 +555,12 @@
           if (this.date[index].isDisabled) return;
           // 当前值
           this.current = this.dateFormat(this.year,this.month,day,0,0,0);
+          // test
+          this.$refs.picker1.value = this.current;
+          let element = this.$refs.picker1;
+          let evObj = document.createEvent('Event');
+          evObj.initEvent('input', true, true);
+          element.dispatchEvent(evObj);
           // css控制
           if (this.date[index].active){
             this.date.forEach((item, index) => {
@@ -413,6 +575,22 @@
             this.$emit('change',this.current);
             this.currentDate = this.year + '-' + (this.month > 9 ? this.month : '0' + this.month) + '-' + (day > 9 ? day : '0' + day);
             this.currentTime = '00:00:00';
+            // 初始化time值
+            this.dateHours.forEach((item,index) => {
+              if (item.text === '00'){
+                item.current = true;
+              }
+            });
+            this.dateMinutes.forEach((item,index) => {
+              if (item.text === '00'){
+                item.current = true;
+              }
+            });
+            this.dateSeconds.forEach((item,index) => {
+              if (item.text === '00'){
+                item.current = true;
+              }
+            });
           }
         }
       },
@@ -782,28 +960,108 @@
             this.currentDate = initYear + '-' + (initMonth > 9 ? initMonth : '0' + initMonth) + '-' + (initDay > 9 ? initDay : '0' + initDay);
             this.currentTime = (initHours > 9 ? initHours : '0' + initHours) + ':' + (initMinutes > 9 ? initMinutes : '0'+initMinutes) + ':' + (initSeconds > 9 ? initSeconds : '0' + initSeconds);
             this.current = this.dateFormat(initYear,initMonth,initDay,initHours,initMinutes,initSeconds);
-            this.changeTime('Hours',initHours);
-            this.changeTime('Minutes',initMinutes);
-            this.changeTime('Seconds',initSeconds);
+            // test
+            this.$refs.picker1.value = this.current;
+            let element1 = this.$refs.picker1;
+            let evObj1 = document.createEvent('Event');
+            evObj1.initEvent('input', true, true);
+            element1.dispatchEvent(evObj1);
+//            this.changeTime('Hours',initHours);
+//            this.changeTime('Minutes',initMinutes);
+//            this.changeTime('Seconds',initSeconds);
             break;
           case 'date':
             this.year = initYear;
             this.month = initMonth;
             this.day = initYear + '-' + initMonth + '-' + initDay;
             this.current = this.dateFormat(initYear,initMonth,initDay);
+            // test
+            this.$refs.picker1.value = this.current;
+            let element2 = this.$refs.picker1;
+            let evObj2 = document.createEvent('Event');
+            evObj2.initEvent('input', true, true);
+            element2.dispatchEvent(evObj2);
             break;
           case 'month':
             this.year2 = initYear;
             this.month2 = initYear + '-' +initMonth;
             this.current = this.dateFormat(initYear,initMonth);
+            // test
+            this.$refs.picker1.value = this.current;
+            let element3 = this.$refs.picker1;
+            let evObj3 = document.createEvent('Event');
+            evObj3.initEvent('input', true, true);
+            element3.dispatchEvent(evObj3);
             break;
           case 'year':
             this.year3 = initYear - 11;
             this.year4 = initYear;
             this.year5 = initYear;
             this.current = this.dateFormat(initYear);
+            // test
+            this.$refs.picker1.value = this.current;
+            let element4 = this.$refs.picker1;
+            let evObj4 = document.createEvent('Event');
+            evObj4.initEvent('input', true, true);
+            element4.dispatchEvent(evObj4);
             break;
         }
+      },
+      getOffsetTop(ele){
+        let tmp = ele.offsetTop;
+        let node= ele.offsetParent;
+        while(node!= null){
+          tmp += node.offsetTop;
+          node= node.offsetParent;
+        }
+        return tmp;
+      },
+      getOffsetLeft(ele){
+        let tmp = ele.offsetLeft;
+        let node= ele.offsetParent;
+        while(node!= null){
+          tmp += node.offsetLeft;
+          node= node.offsetParent;
+        }
+        return tmp;
+      },
+      formatTimestamp(options){
+        let date,
+            str = options.rules ? options.rules : "YYYY-MM-DD hh:mm:ss W",
+            isNow = typeof(options.isNow) == "undefined" ? false : options.isNow,
+            timestamp = options.timestamp ? options.timestamp : 0,
+            week = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+        if (isNow){
+          date = new Date();
+        }else {
+          if (timestamp.toString().length === 10){
+            date = new Date(timestamp*1000);
+          }
+          if (timestamp.toString().length === 13) {
+            date = new Date(timestamp);
+          }
+        }
+
+        str = str.replace(/yyyy|YYYY/, date.getFullYear());
+        str = str.replace(/yy|YY/, (date.getYear() % 100) > 9 ? (date.getYear() % 100).toString() : '0' + (date.getYear() % 100));
+
+        str = str.replace(/MM/, date.getMonth() > 8 ? (date.getMonth() + 1).toString() : '0' + (date.getMonth() + 1));
+        str = str.replace(/M/g, date.getMonth() + 1);
+
+        str = str.replace(/w|W/g, week[date.getDay()]);
+
+        str = str.replace(/dd|DD/, date.getDate() > 9 ? date.getDate().toString() : '0' + date.getDate());
+        str = str.replace(/d|D/g, date.getDate());
+
+        str = str.replace(/hh|HH/, date.getHours() > 9 ? date.getHours().toString() : '0' + date.getHours());
+        str = str.replace(/h|H/g, date.getHours());
+        str = str.replace(/mm/, date.getMinutes() > 9 ? date.getMinutes().toString() : '0' + date.getMinutes());
+        str = str.replace(/m/g, date.getMinutes());
+
+        str = str.replace(/ss|SS/, date.getSeconds() > 9 ? date.getSeconds().toString() : '0' + date.getSeconds());
+        str = str.replace(/s|S/g, date.getSeconds());
+
+        return str;
       }
     },
     mounted(){
@@ -812,8 +1070,8 @@
         this.pickerFlag = false;
         this.timePickerFlag = false;
       },false);
-
-      // 先检查是否有默认值，再初始化数据
+      // 时间选择器数据初始化
+      this.initTimeItems();
       // 初始化默认值
       if (this.defaultTime){
         this.initDateTime();
@@ -866,6 +1124,7 @@
         }
       }
     },
+    filters: {},
     watch:{
       year(curVal,oldVal){
         if (this.type === 'datetime'){
@@ -889,9 +1148,45 @@
       },
       year3(curVal,oldVal){
         this.dateYear = this.getCalendarYear(this.year3,this.year4,this.year5,this.minTime,this.maxTime);
+      },
+      defaultTime(curVal,oldVal){
+        this.initDateTime();
+      },
+      minTime(curVal,oldVal){
+        // 数据初始化
+        switch (this.type){
+          case 'datetime':
+            this.date = this.getCalendarData(this.year,this.month,this.currentDate,this.minTime,this.maxTime);
+            break;
+          case 'date':
+            this.date = this.getCalendarData(this.year,this.month,this.day,this.minTime,this.maxTime);
+            break;
+          case 'month':
+            this.dateMonth = this.getCalendarMonth(this.year2,this.month2,this.minTime,this.maxTime);
+            break;
+          case 'year':
+            this.dateYear = this.getCalendarYear(this.year3,this.year4,this.year5,this.minTime,this.maxTime);
+            break;
+        }
+      },
+      maxTime(curVal,oldVal){
+        // 数据初始化
+        switch (this.type){
+          case 'datetime':
+            this.date = this.getCalendarData(this.year,this.month,this.currentDate,this.minTime,this.maxTime);
+            break;
+          case 'date':
+            this.date = this.getCalendarData(this.year,this.month,this.day,this.minTime,this.maxTime);
+            break;
+          case 'month':
+            this.dateMonth = this.getCalendarMonth(this.year2,this.month2,this.minTime,this.maxTime);
+            break;
+          case 'year':
+            this.dateYear = this.getCalendarYear(this.year3,this.year4,this.year5,this.minTime,this.maxTime);
+            break;
+        }
       }
-
-    }
+    },
   }
 </script>
 
@@ -900,19 +1195,18 @@
   .picker-ipt{
     box-sizing: border-box;
     position: relative;
-    border-radius: 4px;
-    border: 1px solid #dcdfe6;
     color: #606266;
-    height: 38px;
-    display: flex;
-    align-items: center;
-    cursor: pointer;
   }
   .picker-ipt:hover{
     border-color: #409eff;
   }
+  .picker-ipt-container{
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+  }
   .picker-ipt-ico{
-    width: 30px;
+    width: 32px;
   }
   .picker-ipt-ico i{
     display: block;
@@ -922,21 +1216,58 @@
   }
   .picker-ipt-text{
     box-sizing: border-box;
-    padding-left: 10px;
+    display: block;
+    background:none;
+    outline:none;
+    border: 1px solid #ccc;
+    border-radius: 0px;
+    padding-left: 30px;
     font-size: 13px;
-    color: #606266;
+    color: transparent!important;
     text-align: left;
+    position: relative;
+    z-index: 10;
+    left: -31px;
   }
-  .picker-ipt-placeholder{
+  .picker-ipt-text:focus{
+    border: none;
+  }
+  .picker-ipt-text::-webkit-input-placeholder{
     color: #aaa;
   }
+  .picker-ipt-text:-moz-placeholder{
+    color: #aaa;
+  }
+  .picker-ipt-text:-ms-input-placeholder{
+    color: #aaa;
+  }
+  
+  .picker-ipt-text2{
+    box-sizing: border-box!important;
+    background: none!important;
+    border: none!important;
+    border-radius: 0!important;
+    color: #606266!important;
+    min-width: 33px!important;
+    width: 100%!important;
+    outline: none!important;
+    -webkit-appearance: none!important;
+    -moz-appearance: none!important;
+    appearance: none!important;
+    transition: background .5s!important;
+    box-shadow: none!important;
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    z-index: 11;
+  }
+  
   .picker{
     position: absolute;
     left: 0px;
-    top: 37px;
+    z-index: 14;
     max-height: 407px;
-    z-index: 1000;
-    width: 280px;
+    width: 325px;
     border: 1px solid #e4e7ed;
     box-shadow: 0 2px 12px 0 rgba(0,0,0,.1);
     background: #fff;
@@ -946,7 +1277,7 @@
   .picker-header{
     display: flex;
     align-items: center;
-    padding-bottom: 10px;
+    padding-bottom: 20px;
   }
   .picker-header-item{
     box-sizing: border-box;
@@ -974,7 +1305,7 @@
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
-    padding-bottom: 10px;
+    padding-bottom: 20px;
   }
   .picker-week-item{
     width: 14.28%;
@@ -1097,6 +1428,7 @@
   
   .picker-datetime-time{
     position: absolute;
+    z-index: 15;
     width: 141px;
     border: 1px solid #e4e7ed;
     box-shadow: 0 2px 12px 0 rgba(0,0,0,.1);
@@ -1105,13 +1437,37 @@
   }
   .datetime-content{
     display: flex;
+    position: relative;
   }
+  
+  .datetime-content-select{
+    position: absolute;
+    z-index: 16;
+    top: 70px;
+    left: 0px;
+    width: 141px;
+    height: 35px;
+    border-top: 1px solid #409eff;
+    border-bottom: 1px solid #409eff;
+  }
+  
   .datetime-content-grounp{
+    position: relative;
+    z-index: 17;
     display: flex;
     flex: 1;
     flex-direction: column;
+    height: 177px;
+    overflow-y: scroll;
   }
-  .datetime-content-item{
+  
+  .datetime-content-grounp::-webkit-scrollbar{
+    display: none;
+  }
+  
+  .datetime-content-item1,
+  .datetime-content-item2,
+  .datetime-content-item3{
     flex: none;
     height: 35px;
     line-height: 35px;
@@ -1120,9 +1476,9 @@
     cursor: pointer;
     text-align: center;
   }
-  .datetime-content-item-current{
-    border-top: 1px solid #409eff;
-    border-bottom: 1px solid #409eff;
+  .datetime-content-item1-current,
+  .datetime-content-item2-current,
+  .datetime-content-item3-current{
     color: #409eff;
   }
   .datetime-foot{
