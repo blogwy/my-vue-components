@@ -2,6 +2,8 @@
 
 **my-vue-components**
 
+https://user-images.githubusercontent.com/29158253/120582187-a4747e80-c45e-11eb-91f3-259abc7ce320.mp4
+
 ## 自己写的vue组件
 
 * radio
